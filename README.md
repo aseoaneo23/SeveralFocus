@@ -3,5 +3,5 @@
 # Autores 
 - Antonio Seoane de Ois
 - Jorge Neira Cociña
-- Xoaqui
+- Xoaquin Montoto Dieguez
 - Ángel Fernandez Rodriguez

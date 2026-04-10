@@ -4,4 +4,4 @@
 - Antonio Seoane de Ois
 - Jorge Neira Cociña
 - Xoaqui
-- Ángel
+- Ángel Fernandez Rodriguez

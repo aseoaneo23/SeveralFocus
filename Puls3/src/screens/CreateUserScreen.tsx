@@ -11,6 +11,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { supabase } from '../lib/supabase';
+import { OneSignal } from 'react-native-onesignal';
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
@@ -30,14 +32,34 @@ export default function CreateUserScreen({ navigation }: Props) {
     const isValid = userName.trim().length > 0;
 
     // Espacio para integración con el Backend
-    const handleCreateUser = () => {
+    const handleCreateUser = async () => {
         setTouched(true);
         if (!isValid) return;
-        console.log('Nombre del usuario:', userName);
-        navigation.reset({
-            index: 0,
-            routes: [{ name: 'Home' }],
-        });
+
+        try {
+            // 1. Iniciar sesión anónimamente en Auth
+            const { data, error } = await supabase.auth.signInAnonymously();
+            
+            if (error) throw error;
+
+            const userId = data.user?.id;
+
+            if (userId) {
+                // 2. Insertar el usuario en tu tabla pública "users"
+                await supabase.from('users').upsert({ id: userId, username: userName });
+
+                // 3. Registrar este dispositivo en OneSignal con el UUID real
+                OneSignal.login(userId);
+
+                // 4. Navegar al Home
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Home' }],
+                });
+            }
+        } catch (error: any) {
+            console.error('Error creando usuario:', error.message);
+        }
     };
 
     return (

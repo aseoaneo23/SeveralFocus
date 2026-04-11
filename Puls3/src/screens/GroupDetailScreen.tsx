@@ -54,6 +54,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 export default function GroupDetailScreen() {
     const [showCode, setShowCode] = useState(false);
     const [groupId, setGroupId] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | undefined>(undefined);
     const [inviteCode, setInviteCode] = useState<string>('------');
     const [bannedApps, setBannedApps] = useState<string[]>([]);
     const [participants, setParticipants] = useState<any[]>([]);
@@ -65,6 +66,8 @@ export default function GroupDetailScreen() {
                 // 1. Le preguntas a Supabase quién es el usuario que está usando la app
                 const { data: { user }, error: authError } = await supabase.auth.getUser();
                 if (authError || !user) throw new Error("No hay un usuario autenticado");
+
+                setUserId(user.id); // Guardamos la ID para el timeService
 
                 // 2. Buscamos el grupo al que pertenece el usuario
                 const { data: membership } = await supabase
@@ -160,8 +163,8 @@ export default function GroupDetailScreen() {
         };
     }, [groupId]);
 
-    // 3. Le pasamos el groupId al hook
-    const { group, loading, activeSession, startSession, endSession } = useTimeService(groupId);
+    // 3. Le pasamos el groupId y el userId al hook
+    const { group, loading, activeSession, startSession, endSession } = useTimeService(groupId, userId);
 
     const handleScrollingFoo = async (app: string) => {
         if (!isScrolling) {

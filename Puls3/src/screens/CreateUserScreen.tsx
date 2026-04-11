@@ -18,10 +18,10 @@ import { STORAGE_KEYS } from '../navigation/storage';
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
-    background: '#1a1d24',
-    surface: '#2c323d',
-    textPrimary: '#e0e1dd',
-    textSecondary: '#8e9aaf',
+    background: '#000000',
+    surface: '#1A1A1A',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#8A8A8A',
 };
 
 type Props = {
@@ -41,7 +41,7 @@ export default function CreateUserScreen({ navigation }: Props) {
         try {
             // 1. Iniciar sesión anónimamente en Auth
             const { data, error } = await supabase.auth.signInAnonymously();
-            
+
             if (error) throw error;
 
             const userId = data.user?.id;

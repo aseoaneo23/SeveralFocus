@@ -19,11 +19,11 @@ type HomeScreenProps = {
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
-    background: '#1a1d24',
-    surface: '#2c323d',
-    textPrimary: '#e0e1dd',
-    textSecondary: '#8e9aaf',
-    accent: '#6c63ff',
+    background: '#000000',
+    surface: '#1A1A1A',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#8A8A8A',
+    accent: '#F5F5F5',
 };
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
@@ -95,8 +95,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
                 {/* ── Subtítulo ── */}
                 <Text style={styles.subtitle}>
-                    {userGroupId 
-                        ? 'Gestiona tu participación en el grupo' 
+                    {userGroupId
+                        ? 'Gestiona tu participación en el grupo'
                         : 'Selecciona una opción para comenzar'}
                 </Text>
 
@@ -110,7 +110,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     >
                         <Text style={styles.buttonText}>Crear Grupo</Text>
                     </TouchableOpacity>
-                    
+
                     {userGroupId && (
                         <Text style={styles.infoText}>
                             Ya perteneces a un grupo. Debes salir de este para crear uno nuevo.

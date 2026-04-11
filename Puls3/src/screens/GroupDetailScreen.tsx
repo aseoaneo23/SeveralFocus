@@ -24,12 +24,12 @@ type Props = {
 };
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
-    background: '#1a1d24',
-    surface: '#2c323d',
-    textPrimary: '#e0e1dd',
-    textSecondary: '#8e9aaf',
-    accent: '#6c63ff',
-    progress: '#4ecdc4',
+    background: '#000000',
+    surface: '#1A1A1A',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#8A8A8A',
+    accent: '#F5F5F5',
+    progress: '#CDFF00',
 };
 
 // ─── Mock Data ───────────────────────────────────────────────

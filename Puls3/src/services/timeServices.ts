@@ -24,7 +24,8 @@ interface ActiveSession {
 export const useTimeService = (groupId: string | null, userId?: string) => {
   // const { session } = useAuth(); // Depende de useAuth
   // Mock de la sesión temporal usando el parámetro o un string vacío
-  const session = { user: { id: userId || 'ID_DE_USUARIO_AQUI' } }; 
+  Alert.alert('El user id en useTimeService es userId', userId);
+  const session = { user: { id: userId || 'ID_DE_USUARIO_AQUI' } };
   const [group, setGroup] = useState<GroupState | null>(null);
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,13 +77,13 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
           setGroup((prev) =>
             prev
               ? {
-                  ...prev,
-                  usedMinutes: updated.used_minutes,
-                  remainingMinutes: updated.total_minutes - updated.used_minutes,
-                  isAlive: updated.is_alive,
-                  killedBy: updated.killed_by,
-                  streakDays: updated.streak_days,
-                }
+                ...prev,
+                usedMinutes: updated.used_minutes,
+                remainingMinutes: updated.total_minutes - updated.used_minutes,
+                isAlive: updated.is_alive,
+                killedBy: updated.killed_by,
+                streakDays: updated.streak_days,
+              }
               : null
           );
         }
@@ -94,7 +95,7 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
     };
   }, [groupId]);
 
-  
+
   // Iniciar sesión (cuando el usuario abre una app prohibida)
   const startSession = useCallback(
     async (appName: string) => {
@@ -166,18 +167,18 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
 
       // data contiene: { status, minutes_left, killer_name, streak_lost, ... }
       setActiveSession(null)
-     await supabase.from('events').insert({
-          group_id: groupId,
-          user_id: session.user.id,
-          event_type: 'app_closed',
-          app_name: data.appName,
-          minutes_used: data.minutes_used,
-          minutes_left: data.minutes_left,
-          killer_name: data.killer_name,
-          streak_lost: data.streak_lost,
-          status: data.status,
-          metadata: { started_at: new Date().toISOString() },
-        });
+      await supabase.from('events').insert({
+        group_id: groupId,
+        user_id: session.user.id,
+        event_type: 'app_closed',
+        app_name: data.appName,
+        minutes_used: data.minutes_used,
+        minutes_left: data.minutes_left,
+        killer_name: data.killer_name,
+        streak_lost: data.streak_lost,
+        status: data.status,
+        metadata: { started_at: new Date().toISOString() },
+      });
 
       return data;
     } catch (error: any) {

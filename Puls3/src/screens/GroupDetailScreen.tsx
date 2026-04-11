@@ -53,6 +53,8 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 export default function GroupDetailScreen() {
     const [showCode, setShowCode] = useState(false);
     const [groupId, setGroupId] = useState<string | null>(null);
+    const [inviteCode, setInviteCode] = useState<string>('------');
+    const [bannedApps, setBannedApps] = useState<string[]>([]);
     const [participants, setParticipants] = useState<any[]>([]);
 
     useEffect(() => {
@@ -80,11 +82,30 @@ export default function GroupDetailScreen() {
         fetchUser();
     }, []);
 
+    // ── Fetch datos del grupo (invite_code, banned_apps) y participantes ──
     useEffect(() => {
-        const fetchUsersFromGroup = async () => {
-            if (!groupId) return;
+        if (!groupId) return;
+
+        const fetchGroupExtras = async () => {
             try {
-                // Obtenemos los miembros uniéndolo con la tabla 'users' para obtener el username
+                const { data, error } = await supabase
+                    .from('groups')
+                    .select('invite_code, banned_apps')
+                    .eq('id', groupId)
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    setInviteCode(data.invite_code ?? '------');
+                    setBannedApps(data.banned_apps ?? []);
+                }
+            } catch (error) {
+                console.log('Error al traer extras del grupo:', error);
+            }
+        };
+
+        const fetchUsersFromGroup = async () => {
+            try {
                 const { data: membershipsData, error } = await supabase
                     .from('memberships')
                     .select(`
@@ -99,15 +120,16 @@ export default function GroupDetailScreen() {
                     const formattedUsers = membershipsData.map((m: any) => ({
                         id: m.users?.id || m.user_id,
                         username: m.users?.username || 'Anónimo',
-                        minutes_used: 0 // Aquí podrías cruzarlo con la tabla sessions en el futuro
+                        minutes_used: 0
                     }));
                     setParticipants(formattedUsers);
                 }
             } catch (error) {
-                console.log("Error al traer participantes:", error);
+                console.log('Error al traer participantes:', error);
             }
         };
 
+        fetchGroupExtras();
         fetchUsersFromGroup();
     }, [groupId]);
 
@@ -119,7 +141,6 @@ export default function GroupDetailScreen() {
     const used_minutes = group?.usedMinutes ?? MOCK_GROUP.used_minutes;
     const streak_days = group?.streakDays ?? MOCK_GROUP.streak_days;
     const name = group?.name ?? MOCK_GROUP.name;
-    const invite_code = MOCK_GROUP.invite_code;
     const remaining = total_minutes - used_minutes;
     const usedRatio = used_minutes / total_minutes;
     const progressOffset = CIRCUMFERENCE * (1 - usedRatio);
@@ -142,12 +163,13 @@ export default function GroupDetailScreen() {
                         onPress={() => setShowCode(!showCode)}
                     >
                         <Text style={styles.groupName}>{name}</Text>
-                        {showCode && (
-                            <View style={styles.codeBadge}>
-                                <Text style={styles.codeText}>{invite_code}</Text>
-                            </View>
-                        )}
                     </TouchableOpacity>
+
+                    {showCode && (
+                        <View style={styles.codeBadge}>
+                            <Text style={styles.codeText}>{inviteCode}</Text>
+                        </View>
+                    )}
 
                     {/* ── Racha ── */}
                     <Text style={styles.streak}>
@@ -221,7 +243,7 @@ export default function GroupDetailScreen() {
                 <View style={styles.bannedAppsSection}>
                     <Text style={styles.sectionTitle}>Simular uso de app</Text>
                     <View style={styles.bannedAppsRow}>
-                        {MOCK_GROUP.banned_apps.map((app) => (
+                        {(bannedApps.length > 0 ? bannedApps : MOCK_GROUP.banned_apps).map((app) => (
                             <TouchableOpacity
                                 key={app}
                                 style={styles.appCircle}
@@ -275,9 +297,10 @@ const styles = StyleSheet.create({
     codeBadge: {
         backgroundColor: COLORS.surface,
         paddingHorizontal: 12,
-        paddingVertical: 4,
+        paddingVertical: 6,
         borderRadius: 8,
-        marginLeft: 12,
+        marginTop: 8,
+        alignSelf: 'flex-start',
     },
     codeText: {
         fontSize: 14,

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Alert } from 'react-native';
 import {
     View,
     Text,
@@ -32,6 +33,7 @@ const MOCK_GROUP = {
     best_streak: 14,
     is_alive: true,
     reset_period: 'daily' as const,
+    banned_apps: ['Instagram', 'TikTok', 'Twitter', 'YouTube'],
 };
 
 const MOCK_PARTICIPANTS = [
@@ -145,6 +147,30 @@ export default function GroupDetailScreen() {
                             </Text>
                         </View>
                     ))}
+                </View>
+
+                {/* ── Simulador de Apps Prohibidas ── */}
+                <View style={styles.bannedAppsSection}>
+                    <Text style={styles.sectionTitle}>Simular uso de app</Text>
+                    <View style={styles.bannedAppsRow}>
+                        {MOCK_GROUP.banned_apps.map((app) => (
+                            <TouchableOpacity
+                                key={app}
+                                style={styles.appCircle}
+                                activeOpacity={0.7}
+                                onPress={() =>
+                                    Alert.alert(
+                                        '⏱ Simulando uso',
+                                        `Estás usando ${app}... El tiempo del grupo corre.`,
+                                    )
+                                }
+                            >
+                                <Text style={styles.appCircleText}>
+                                    {app.charAt(0).toUpperCase()}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -287,5 +313,28 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.textSecondary,
         fontWeight: '500',
+    },
+
+    // ── Apps Prohibidas ──
+    bannedAppsSection: {
+        marginTop: 24,
+    },
+    bannedAppsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    appCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: COLORS.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    appCircleText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: COLORS.accent,
     },
 });

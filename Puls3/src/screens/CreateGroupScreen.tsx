@@ -30,9 +30,12 @@ const COLORS = {
 
 export default function CreateGroupScreen({ navigation }: Props) {
     const [groupName, setGroupName] = useState('');
+    const [bannedAppsInput, setBannedAppsInput] = useState('');
     const [touched, setTouched] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const isValid = groupName.trim().length > 0;
+    const isNameValid = groupName.trim().length > 0;
+    const isAppsValid = bannedAppsInput.trim().length > 0;
+    const isValid = isNameValid && isAppsValid;
 
     // Integración con el Backend
     const handleCreateGroup = async () => {
@@ -46,9 +49,14 @@ export default function CreateGroupScreen({ navigation }: Props) {
                 throw new Error('Debes estar autenticado para crear un grupo');
             }
 
+            const bannedAppsArray = bannedAppsInput
+                .split(',')
+                .map(app => app.trim())
+                .filter(app => app.length > 0);
+
             await createGroup({
                 name: groupName,
-                bannedApps: [], // Valor por defecto
+                bannedApps: bannedAppsArray,
                 timePerPerson: 60, // Valor por defecto en minutos
                 maxMembers: 10, // Valor por defecto
                 isPublic: true, // Valor por defecto
@@ -73,9 +81,10 @@ export default function CreateGroupScreen({ navigation }: Props) {
 
             <View style={styles.content}>
                 {/* ── Título ── */}
-                <Text style={styles.title}>Nombre de Grupo</Text>
+                <Text style={styles.title}>Crear Grupo</Text>
 
-                {/* ── Input ── */}
+                {/* ── Input Nombre ── */}
+                <Text style={styles.label}>Nombre de Grupo</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="Escribe el nombre del grupo..."
@@ -85,9 +94,25 @@ export default function CreateGroupScreen({ navigation }: Props) {
                     editable={!isLoading}
                 />
 
-                {/* ── Error ── */}
-                {touched && !isValid && (
+                {/* ── Input Apps Prohibidas ── */}
+                <Text style={styles.label}>Aplicaciones Prohibidas (separadas por coma)</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ej: Instagram, TikTok, Twitter..."
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={bannedAppsInput}
+                    onChangeText={setBannedAppsInput}
+                    editable={!isLoading}
+                />
+
+                {/* ── Error Nombre ── */}
+                {touched && !isNameValid && (
                     <Text style={styles.errorText}>El nombre no puede estar vacío</Text>
+                )}
+
+                {/* ── Error Apps Prohibidas ── */}
+                {touched && !isAppsValid && (
+                    <Text style={styles.errorText}>Debes añadir al menos una aplicación prohibida</Text>
                 )}
 
                 {/* ── Botón ── */}
@@ -126,6 +151,13 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary,
         marginBottom: 32,
         letterSpacing: 0.5,
+    },
+    label: {
+        alignSelf: 'flex-start',
+        color: COLORS.textPrimary,
+        fontSize: 14,
+        fontWeight: '500',
+        marginBottom: 8,
     },
     input: {
         width: '100%',

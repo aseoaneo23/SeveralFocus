@@ -62,6 +62,7 @@ export default function GroupDetailScreen({ navigation }: Props) {
     const [showCode, setShowCode] = useState(false);
     const [groupId, setGroupId] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | undefined>(undefined);
+    const [username, setUsername] = useState<string | undefined>(undefined);
     const [inviteCode, setInviteCode] = useState<string>('------');
     const [bannedApps, setBannedApps] = useState<string[]>([]);
     const [participants, setParticipants] = useState<any[]>([]);
@@ -75,6 +76,14 @@ export default function GroupDetailScreen({ navigation }: Props) {
                 if (authError || !user) throw new Error("No hay un usuario autenticado");
 
                 setUserId(user.id); // Guardamos la ID para el timeService
+
+                // Fetch the username for push notification metadata
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('username')
+                    .eq('id', user.id)
+                    .single();
+                if (userData?.username) setUsername(userData.username);
 
                 // 2. Buscamos el grupo al que pertenece el usuario
                 const { data: membership } = await supabase
@@ -145,7 +154,7 @@ export default function GroupDetailScreen({ navigation }: Props) {
                         .filter((m: any) => m.users) // Nos aseguramos de que el usuario exista
                         .map((m: any) => {
                             const userSessions = sessionsData?.filter((s: any) => s.user_id === m.user_id) || [];
-                            
+
                             const totalMinutesToday = userSessions.reduce((sum: number, s: any) => {
                                 if (s.minutes_used !== null) {
                                     return sum + s.minutes_used;
@@ -157,7 +166,7 @@ export default function GroupDetailScreen({ navigation }: Props) {
                                 }
                                 return sum;
                             }, 0);
-                            
+
                             return {
                                 id: m.users?.id || m.user_id,
                                 username: m.users?.username || 'Usuario',
@@ -214,7 +223,7 @@ export default function GroupDetailScreen({ navigation }: Props) {
     }, [groupId]);
 
     // 3. Le pasamos el groupId y el userId al hook
-    const { group, loading, activeSession, startSession, endSession } = useTimeService(groupId, userId);
+    const { group, loading, activeSession, startSession, endSession } = useTimeService(groupId, userId, username);
 
     const handleScrollingFoo = async (app: string) => {
         if (!isScrolling) {

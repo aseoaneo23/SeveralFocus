@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Alert, AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib/supabase';
-// import { useAuth } from './useAuth'; // Comentado temporalmente porque aún no tienes creado este hook
 
 interface GroupState {
   id: string;
@@ -22,15 +21,12 @@ interface ActiveSession {
   startedAt: Date;
 }
 
-export const useTimeService = (groupId: string | null, userId?: string) => {
-  // Memoizamos el objeto de sesión para que no cambie su referencia en cada render y cause un bucle infinito
+export const useTimeService = (groupId: string | null, userId?: string, username?: string) => {
   const session = useMemo(() => ({ user: { id: userId || 'ID_DE_USUARIO_AQUI' } }), [userId]);
   const [group, setGroup] = useState<GroupState | null>(null);
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
   const [loading, setLoading] = useState(false);
-  const appStateSubscription = useRef<any>(null);
 
-  // Cargar el estado inicial del grupo
   const loadGroup = useCallback(async () => {
     if (!groupId || !session?.user.id) return;
 
@@ -44,6 +40,7 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
       console.error('Error loading group:', error);
       return;
     }
+
     setGroup({
       id: data.id,
       name: data.name,
@@ -55,10 +52,8 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
       streakDays: data.streak_days,
       createdBy: data.created_by,
     });
-
   }, [groupId, session]);
 
-  // Suscripción en tiempo real a cambios en el grupo (para actualizar used_minutes)
   useEffect(() => {
     if (!groupId) return;
 
@@ -95,17 +90,13 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
     };
   }, [groupId]);
 
-
-  // Iniciar sesión (cuando el usuario abre una app prohibida)
   const startSession = useCallback(
     async (appName: string) => {
+
       if (!groupId || !session?.user.id) {
         throw new Error('No hay grupo activo o usuario no autenticado');
       }
-      if (activeSession) {
-        console.warn('Ya hay una sesión activa. Ciérrala primero.');
-        return;
-      }
+      if (activeSession) return;
 
       setLoading(true);
       try {
@@ -129,82 +120,79 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
           startedAt: new Date(),
         });
 
-        // Opcional: registrar evento de app_opened (aunque close_session ya lo hace)
+        // Evento app_opened
         await supabase.from('events').insert({
           group_id: groupId,
           user_id: session.user.id,
           event_type: 'app_opened',
           app_name: appName,
-          metadata: { started_at: new Date().toISOString() },
+          metadata: {
+            username: username || session.user.id.substring(0, 6)
+          },
         });
 
         return data.id;
       } catch (error: any) {
         console.error('Error starting session:', error);
-        Alert.alert('Error', 'No se pudo iniciar la sesión: ' + error.message);
         throw error;
       } finally {
         setLoading(false);
       }
     },
-    [groupId, session, activeSession]
+    [groupId, session, activeSession, username]
   );
 
-  // Finalizar sesión (cuando el usuario cierra la app o deja de scrollear)
+  useEffect(() => {
+    if (!activeSession) return;
+
+    const interval = setInterval(async () => {
+      await supabase.from('events').insert({
+        group_id: activeSession.groupId,
+        user_id: session.user.id,
+        event_type: 'milestone_5',
+        app_name: activeSession.appName,
+        metadata: {
+          username: username || session.user.id.substring(0, 6),
+        },
+      });
+
+      console.log("⏱️ milestone enviado");
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [activeSession]);
+
   const endSession = useCallback(async () => {
-    if (!activeSession) {
-      console.warn('No hay sesión activa para cerrar');
-      return null;
-    }
+    if (!activeSession) return null;
 
     setLoading(true);
     try {
+      // 1. Cerramos la sesión en la DB usando el RPC (esto calcula minutos usados)
       const { data, error } = await supabase.rpc('close_session', {
         p_session_id: activeSession.id,
       });
 
       if (error) throw error;
 
-      // data contiene: { status, minutes_left, killer_name, streak_lost, ... }
-      setActiveSession(null)
-      await supabase.from('events').insert({
-        group_id: groupId,
-        user_id: session.user.id,
-        event_type: 'app_closed',
-        app_name: data.appName,
-        minutes_used: data.minutes_used,
-        minutes_left: data.minutes_left,
-        killer_name: data.killer_name,
-        streak_lost: data.streak_lost,
-        status: data.status,
-        metadata: { started_at: new Date().toISOString() },
-      });
-
+      setActiveSession(null);
       return data;
     } catch (error: any) {
       console.error('Error ending session:', error);
-      Alert.alert('Error', 'No se pudo cerrar la sesión: ' + error.message);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [activeSession]);
+  }, [activeSession, groupId, session, username]);
 
-  // Detectar cuando la app pasa a segundo plano / primer plano (opcional)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (nextAppState === 'background' && activeSession) {
-        // Si la app pasa a segundo plano y hay sesión activa, la cerramos automáticamente
         endSession();
       }
     });
-
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, [activeSession, endSession]);
 
-  // Cargar grupo inicial
   useEffect(() => {
     loadGroup();
   }, [loadGroup]);

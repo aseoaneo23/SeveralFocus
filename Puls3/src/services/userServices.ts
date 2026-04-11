@@ -1,20 +1,30 @@
 import { supabase } from '../lib/supabase';
 
 export interface CreateUserParams {
-    username: string
+  username: string
 }
 
 export const createUser = async (params: CreateUserParams) => {
-    const { data, error } = await supabase
-        .from('users')
-        .insert({
-            username: params.username,
-        })
-        .select()
-        .single();
+  const { data, error } = await supabase
+    .from('users')
+    .insert({
+      username: params.username,
+    })
+    .select()
+    .single();
 
-    if (error) throw error;
-    return data;
+  if (error) throw error;
+  return data;
+}
+
+export const getFriends = async (user_id: string) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user_id);
+
+  if (error) throw error;
+  return data;
 }
 
 /*const handleCreate = async () => {

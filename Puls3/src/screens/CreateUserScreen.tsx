@@ -48,7 +48,10 @@ export default function CreateUserScreen({ navigation }: Props) {
 
             if (userId) {
                 // 2. Insertar el usuario en tu tabla pública "users"
-                await supabase.from('users').upsert({ id: userId, username: userName });
+                const { error: insertError } = await supabase
+                    .from('users')
+                    .insert({ id: userId, username: userName });
+                if (insertError) throw insertError;
 
                 // 3. Guardar persistencia de sesión en AsyncStorage
                 await AsyncStorage.setItem(STORAGE_KEYS.USER_ID, userId);

@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
         }
 
         // We only need the user_ids (which match the OneSignal external_id)
-        const userIds = members.map((m) => m.user_id).filter(Boolean)
+        const userIds = members.map((m: { user_id: string }) => m.user_id).filter(Boolean)
 
         if (userIds.length === 0) {
             return new Response(
@@ -73,17 +73,21 @@ Deno.serve(async (req) => {
             )
         }
 
-        // Grab username from metadata or fallback to shorten UUID
-        const username = event.metadata?.username || `User ${event.user_id.substring(0, 4)}`
+        // Grab username from metadata or fallback to shortened UUID
+        const username = event.metadata?.username || event.metadata?.user_name || `User ${event.user_id.substring(0, 4)}`
 
-        // 2. Formatting the notification based on event.event_type
+        // 2. Format the notification based on event_type
         let heading = "Notificación"
         let content = "Ha ocurrido un evento nuevo."
 
         switch (event.event_type) {
             case "app_opened":
                 heading = "🛑 App Abierta"
-                content = `🚨 ${username} abrió ${event.app_name || "una app prohibida"}`
+                content = `🚨 ${username} abrió ${event.app_name || "una app restringida"}`
+                break
+            case "app_closed":
+                heading = "✅ App Cerrada"
+                content = `✅ ${username} cerró ${event.app_name || "la app"} — quedan ${event.minutes_left ?? "?"} min`
                 break
             case "milestone_5":
                 heading = "⚠️ Aviso de Tiempo"
@@ -91,16 +95,16 @@ Deno.serve(async (req) => {
                 break
             case "critical_5":
                 heading = "⛔ Tiempo Crítico"
-                content = `⛔ Sólo os quedan ${event.minutes_left || 0} minutos`
+                content = `⛔ Sólo os quedan ${event.minutes_left ?? 0} minutos`
                 break
             case "group_death":
                 heading = "💀 Grupo Destruido"
-                content = `💀 ${username} la ha liado pero bien! Bye bye grupo!`
+                content = `💀 ${username} ha eliminado el grupo por superar el límite de tiempo`
                 break
         }
 
         // 3. Send to OneSignal
-        // Usar include_aliases permite a OneSignal mapear los UUIDs de Supabase directamente a los celulares
+        // include_aliases maps Supabase UUIDs directly to registered devices
         const onesignalBody = {
             app_id: onesignalAppId,
             target_channel: "push",
@@ -112,7 +116,7 @@ Deno.serve(async (req) => {
             data: {
                 event_id: event.id,
                 group_id: event.group_id,
-                type: event.type,
+                event_type: event.event_type, // ✅ fixed: was event.type (undefined)
             },
         }
 

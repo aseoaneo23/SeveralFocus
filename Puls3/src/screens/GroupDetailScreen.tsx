@@ -131,6 +131,31 @@ export default function GroupDetailScreen() {
 
         fetchGroupExtras();
         fetchUsersFromGroup();
+
+        // Si tenemos groupId, nos suscribimos a los cambios en tiempo real
+        if (!groupId) return;
+
+        const channel = supabase
+            .channel(`memberships-${groupId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Escuchar INSERT, UPDATE, DELETE
+                    schema: 'public',
+                    table: 'memberships',
+                    filter: `group_id=eq.${groupId}`,
+                },
+                (payload) => {
+                    console.log('Cambio detectado en membresías:', payload);
+                    fetchUsersFromGroup(); // Recarga la lista inmediatamente
+                }
+            )
+            .subscribe();
+
+        // Importante: Limpiar la suscripción cuando el usuario sale de la pantalla
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [groupId]);
 
     // 3. Le pasamos el groupId al hook (debe destruturarse como objeto, no array)

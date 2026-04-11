@@ -11,7 +11,9 @@ interface EventRecord {
     id: string
     group_id: string
     user_id: string
-    type: "app_opened" | "app_closed" | "milestone_5" | "critical_10" | "group_death" | "daily_reset"
+    event_type: "app_opened" | "app_closed" | "milestone_5" | "milestone_half" | "warning_15" | "critical_5" | "group_death" | "streak_record" | "daily_reset" | "weekly_reset"
+    app_name?: string
+    minutes_left?: number
     metadata: Record<string, any>
     created_at: string
 }
@@ -53,7 +55,7 @@ Deno.serve(async (req) => {
 
         // 1. Get the members of the group
         const { data: members, error: membersError } = await supabase
-            .from('group_members')
+            .from('memberships')
             .select('user_id')
             .eq('group_id', event.group_id)
 
@@ -74,26 +76,26 @@ Deno.serve(async (req) => {
         // Grab username from metadata or fallback to shorten UUID
         const username = event.metadata?.username || `User ${event.user_id.substring(0, 4)}`
 
-        // 2. Formatting the notification based on event.type
-        let heading = "Notification"
-        let content = "A new event occurred in your group."
+        // 2. Formatting the notification based on event.event_type
+        let heading = "Notificación"
+        let content = "Ha ocurrido un evento nuevo."
 
-        switch (event.type) {
+        switch (event.event_type) {
             case "app_opened":
-                heading = "🛑 App Opened"
-                content = `🚨 ${username} opened ${event.metadata?.app_name || "a forbidden app"}`
+                heading = "🛑 App Abierta"
+                content = `🚨 ${username} abrió ${event.app_name || "una app prohibida"}`
                 break
             case "milestone_5":
-                heading = "⚠️ Time Warning"
-                content = `⚠️ ${username} has consumed 5 minutos`
+                heading = "⚠️ Aviso de Tiempo"
+                content = `⚠️ ${username} ha consumido 5 minutos`
                 break
-            case "critical_10":
-                heading = "⛔ Critical Time"
-                content = `⛔ Only ${event.metadata?.remaining_time || 0} minutes left`
+            case "critical_5":
+                heading = "⛔ Tiempo Crítico"
+                content = `⛔ Sólo os quedan ${event.minutes_left || 0} minutos`
                 break
             case "group_death":
-                heading = "💀 Group Dead"
-                content = `💀 ${username} destroyed the group`
+                heading = "💀 Grupo Destruido"
+                content = `💀 ${username} la ha liado pero bien! Bye bye grupo!`
                 break
         }
 

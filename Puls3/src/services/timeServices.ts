@@ -63,7 +63,7 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
     if (!groupId) return;
 
     const channel = supabase
-      .channel(`group-${groupId}`)
+      .channel(`group-time-${groupId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {

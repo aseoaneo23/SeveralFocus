@@ -176,7 +176,7 @@ export default function GroupDetailScreen({ navigation }: Props) {
         if (!groupId) return;
 
         const channel = supabase
-            .channel(`group-details-${groupId}`)
+            .channel(`group-details-${groupId}-${Date.now()}`)
             .on(
                 'postgres_changes',
                 {

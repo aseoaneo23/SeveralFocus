@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -7,6 +7,7 @@ import {
     SafeAreaView,
     ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -29,30 +30,35 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     const [userGroupId, setUserGroupId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const checkMembership = async () => {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
+    useFocusEffect(
+        useCallback(() => {
+            const checkMembership = async () => {
+                try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) return;
 
-                const { data: membership, error } = await supabase
-                    .from('memberships')
-                    .select('group_id')
-                    .eq('user_id', user.id)
-                    .single();
+                    const { data: membership, error } = await supabase
+                        .from('memberships')
+                        .select('group_id')
+                        .eq('user_id', user.id)
+                        .single();
 
-                if (membership) {
-                    setUserGroupId(membership.group_id);
+                    if (membership) {
+                        setUserGroupId(membership.group_id);
+                    } else {
+                        setUserGroupId(null);
+                    }
+                } catch (error) {
+                    console.log('Error checking membership:', error);
+                    setUserGroupId(null);
+                } finally {
+                    setIsLoading(false);
                 }
-            } catch (error) {
-                console.log('Error checking membership:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+            };
 
-        checkMembership();
-    }, []);
+            checkMembership();
+        }, [])
+    );
 
     const handleCreateGroup = () => {
         if (!userGroupId) {

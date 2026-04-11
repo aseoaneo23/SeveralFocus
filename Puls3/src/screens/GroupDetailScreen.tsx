@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../navigation/storage';
+import { leaveGroup } from '../services/groupService';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -243,21 +244,32 @@ export default function GroupDetailScreen({ navigation }: Props) {
     // ── Porcentaje para la barra lineal ──
     const barPercent = (used_minutes / total_minutes) * 100;
 
-    const handleLeaveGroup = async () => {
+    const handleGoHome = () => {
+        navigation.navigate('Home');
+    };
+
+    const handleAbandonGroup = async () => {
+        if (!userId || !groupId) return;
+
         Alert.alert(
-            'Salir del grupo',
-            '¿Estás seguro de que quieres salir a la pantalla principal?',
+            'Abandonar grupo',
+            'Saldrás definitivamente de este grupo. ¿Estás seguro?',
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {
-                    text: 'Salir',
+                    text: 'Abandonar',
                     style: 'destructive',
                     onPress: async () => {
-                        await AsyncStorage.removeItem(STORAGE_KEYS.GROUP_ID);
-                        navigation.reset({
-                            index: 0,
-                            routes: [{ name: 'Home' }],
-                        });
+                        try {
+                            await leaveGroup(userId, groupId);
+                            await AsyncStorage.removeItem(STORAGE_KEYS.GROUP_ID);
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Home' }],
+                            });
+                        } catch (error: any) {
+                            Alert.alert('Error', 'No se pudo abandonar el grupo: ' + error.message);
+                        }
                     },
                 },
             ]
@@ -282,12 +294,21 @@ export default function GroupDetailScreen({ navigation }: Props) {
                             <Text style={styles.groupName}>{name}</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={styles.exitButton}
-                            onPress={handleLeaveGroup}
-                        >
-                            <Text style={styles.exitButtonText}>Salir</Text>
-                        </TouchableOpacity>
+                        <View style={styles.headerButtons}>
+                            <TouchableOpacity
+                                style={styles.abandonButton}
+                                onPress={handleAbandonGroup}
+                            >
+                                <Text style={styles.abandonButtonText}>Abandonar</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.exitButton}
+                                onPress={handleGoHome}
+                            >
+                                <Text style={styles.exitButtonText}>Salir</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {showCode && (
@@ -411,6 +432,24 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    headerButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    abandonButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: 'rgba(142, 154, 175, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(142, 154, 175, 0.3)',
+    },
+    abandonButtonText: {
+        color: COLORS.textSecondary,
+        fontWeight: '600',
+        fontSize: 12,
+    },
     exitButton: {
         paddingHorizontal: 16,
         paddingVertical: 8,
@@ -422,7 +461,7 @@ const styles = StyleSheet.create({
     exitButtonText: {
         color: '#ff453a',
         fontWeight: '600',
-        fontSize: 14,
+        fontSize: 12,
     },
     titleRow: {
         flex: 1,

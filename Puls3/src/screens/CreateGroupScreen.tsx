@@ -124,13 +124,17 @@ export default function CreateGroupScreen({ navigation }: Props) {
                     onPress={handleCreateGroup}
                     disabled={!isValid || isLoading}
                 >
-                    {isLoading ? (
-                        <ActivityIndicator color={COLORS.textPrimary} />
-                    ) : (
-                        <Text style={styles.buttonText}>Crear Grupo</Text>
-                    )}
+                    <Text style={styles.buttonText}>Crear Grupo</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* ── Overlay de Carga ── */}
+            {isLoading && (
+                <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color={COLORS.textPrimary} />
+                    <Text style={styles.loadingText}>Creando grupo...</Text>
+                </View>
+            )}
         </KeyboardAvoidingView>
     );
 }
@@ -191,5 +195,18 @@ const styles = StyleSheet.create({
         color: COLORS.textPrimary,
         fontSize: 16,
         fontWeight: '600',
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: COLORS.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    loadingText: {
+        color: COLORS.textPrimary,
+        fontSize: 18,
+        fontWeight: '600',
+        marginTop: 16,
     },
 });

@@ -7,10 +7,14 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { createGroup } from '../services/groupService';
+import { supabase } from '../lib/supabase';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'CreateGroup'>;
@@ -27,14 +31,37 @@ const COLORS = {
 export default function CreateGroupScreen({ navigation }: Props) {
     const [groupName, setGroupName] = useState('');
     const [touched, setTouched] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const isValid = groupName.trim().length > 0;
 
-    // Espacio para integración con el Backend
-    const handleCreateGroup = () => {
+    // Integración con el Backend
+    const handleCreateGroup = async () => {
         setTouched(true);
         if (!isValid) return;
-        console.log('Nombre del grupo:', groupName);
-        navigation.navigate('GroupDetail');
+
+        setIsLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                throw new Error('Debes estar autenticado para crear un grupo');
+            }
+
+            await createGroup({
+                name: groupName,
+                bannedApps: [], // Valor por defecto
+                timePerPerson: 60, // Valor por defecto en minutos
+                maxMembers: 10, // Valor por defecto
+                isPublic: true, // Valor por defecto
+                createdBy: user.id,
+            });
+
+            Alert.alert("¡Éxito!", "Grupo creado correctamente");
+            navigation.navigate('GroupDetail');
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Ocurrió un error al crear el grupo");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -55,6 +82,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
                     placeholderTextColor={COLORS.textSecondary}
                     value={groupName}
                     onChangeText={setGroupName}
+                    editable={!isLoading}
                 />
 
                 {/* ── Error ── */}
@@ -64,12 +92,16 @@ export default function CreateGroupScreen({ navigation }: Props) {
 
                 {/* ── Botón ── */}
                 <TouchableOpacity
-                    style={[styles.button, !isValid && styles.buttonDisabled]}
+                    style={[styles.button, (!isValid || isLoading) && styles.buttonDisabled]}
                     activeOpacity={0.7}
                     onPress={handleCreateGroup}
-                    disabled={!isValid}
+                    disabled={!isValid || isLoading}
                 >
-                    <Text style={styles.buttonText}>Crear Grupo</Text>
+                    {isLoading ? (
+                        <ActivityIndicator color={COLORS.textPrimary} />
+                    ) : (
+                        <Text style={styles.buttonText}>Crear Grupo</Text>
+                    )}
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>

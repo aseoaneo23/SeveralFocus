@@ -124,7 +124,7 @@ export default function GroupDetailScreen() {
                 if (membershipsData) {
                     const formattedUsers = membershipsData.map((m: any) => ({
                         id: m.users?.id || m.user_id,
-                        username: m.users?.username || 'Anónimo',
+                        username: m.users.username,
                         minutes_used: 0
                     }));
                     setParticipants(formattedUsers);

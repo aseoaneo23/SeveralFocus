@@ -9,6 +9,12 @@ import {
     Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
+
+type Props = {
+    navigation: NativeStackNavigationProp<RootStackParamList, 'JoinGroup'>;
+};
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
@@ -18,12 +24,17 @@ const COLORS = {
     textSecondary: '#8e9aaf',
 };
 
-export default function JoinGroupsScreen() {
-    const [groupName, setGroupName] = useState('');
+export default function JoinGroupsScreen({ navigation }: Props) {
+    const [groupCode, setGroupCode] = useState('');
+    const [touched, setTouched] = useState(false);
+    const isValid = groupCode.trim().length > 0;
 
     // Espacio para integración con el Backend (GroupCode)
     const handleJoinGroup = () => {
-        console.log('Codigo del grupo:', groupName);
+        setTouched(true);
+        if (!isValid) return;
+        console.log('Codigo del grupo:', groupCode);
+        navigation.navigate('GroupDetail');
     };
 
     return (
@@ -42,15 +53,21 @@ export default function JoinGroupsScreen() {
                     style={styles.input}
                     placeholder="Escribe el codigo de tu grupo..."
                     placeholderTextColor={COLORS.textSecondary}
-                    value={groupName}
-                    onChangeText={setGroupName}
+                    value={groupCode}
+                    onChangeText={setGroupCode}
                 />
+
+                {/* ── Error ── */}
+                {touched && !isValid && (
+                    <Text style={styles.errorText}>El código no puede estar vacío</Text>
+                )}
 
                 {/* ── Botón ── */}
                 <TouchableOpacity
-                    style={styles.button}
+                    style={[styles.button, !isValid && styles.buttonDisabled]}
                     activeOpacity={0.7}
                     onPress={handleJoinGroup}
+                    disabled={!isValid}
                 >
                     <Text style={styles.buttonText}>Unirse al Grupo</Text>
                 </TouchableOpacity>
@@ -94,6 +111,15 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
+    },
+    buttonDisabled: {
+        opacity: 0.5,
+    },
+    errorText: {
+        color: COLORS.textSecondary,
+        fontSize: 13,
+        marginBottom: 12,
+        alignSelf: 'flex-start',
     },
     buttonText: {
         color: COLORS.textPrimary,

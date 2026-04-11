@@ -26,11 +26,18 @@ type Props = {
 
 export default function CreateUserScreen({ navigation }: Props) {
     const [userName, setUserName] = useState('');
+    const [touched, setTouched] = useState(false);
+    const isValid = userName.trim().length > 0;
 
     // Espacio para integración con el Backend
     const handleCreateUser = () => {
+        setTouched(true);
+        if (!isValid) return;
         console.log('Nombre del usuario:', userName);
-        navigation.replace('Home');
+        navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+        });
     };
 
     return (
@@ -53,11 +60,17 @@ export default function CreateUserScreen({ navigation }: Props) {
                     onChangeText={setUserName}
                 />
 
+                {/* ── Error ── */}
+                {touched && !isValid && (
+                    <Text style={styles.errorText}>El nombre no puede estar vacío</Text>
+                )}
+
                 {/* ── Botón ── */}
                 <TouchableOpacity
-                    style={styles.button}
+                    style={[styles.button, !isValid && styles.buttonDisabled]}
                     activeOpacity={0.7}
                     onPress={handleCreateUser}
+                    disabled={!isValid}
                 >
                     <Text style={styles.buttonText}>Crear Usuario</Text>
                 </TouchableOpacity>
@@ -101,6 +114,15 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
+    },
+    buttonDisabled: {
+        opacity: 0.5,
+    },
+    errorText: {
+        color: COLORS.textSecondary,
+        fontSize: 13,
+        marginBottom: 12,
+        alignSelf: 'flex-start',
     },
     buttonText: {
         color: COLORS.textPrimary,

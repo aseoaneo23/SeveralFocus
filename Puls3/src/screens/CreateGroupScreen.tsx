@@ -9,6 +9,12 @@ import {
     Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
+
+type Props = {
+    navigation: NativeStackNavigationProp<RootStackParamList, 'CreateGroup'>;
+};
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
@@ -18,12 +24,17 @@ const COLORS = {
     textSecondary: '#8e9aaf',
 };
 
-export default function CreateGroupScreen() {
+export default function CreateGroupScreen({ navigation }: Props) {
     const [groupName, setGroupName] = useState('');
+    const [touched, setTouched] = useState(false);
+    const isValid = groupName.trim().length > 0;
 
     // Espacio para integración con el Backend
     const handleCreateGroup = () => {
+        setTouched(true);
+        if (!isValid) return;
         console.log('Nombre del grupo:', groupName);
+        navigation.navigate('GroupDetail');
     };
 
     return (
@@ -46,11 +57,17 @@ export default function CreateGroupScreen() {
                     onChangeText={setGroupName}
                 />
 
+                {/* ── Error ── */}
+                {touched && !isValid && (
+                    <Text style={styles.errorText}>El nombre no puede estar vacío</Text>
+                )}
+
                 {/* ── Botón ── */}
                 <TouchableOpacity
-                    style={styles.button}
+                    style={[styles.button, !isValid && styles.buttonDisabled]}
                     activeOpacity={0.7}
                     onPress={handleCreateGroup}
+                    disabled={!isValid}
                 >
                     <Text style={styles.buttonText}>Crear Grupo</Text>
                 </TouchableOpacity>
@@ -94,6 +111,15 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
+    },
+    buttonDisabled: {
+        opacity: 0.5,
+    },
+    errorText: {
+        color: COLORS.textSecondary,
+        fontSize: 13,
+        marginBottom: 12,
+        alignSelf: 'flex-start',
     },
     buttonText: {
         color: COLORS.textPrimary,

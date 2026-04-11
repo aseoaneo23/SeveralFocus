@@ -1,0 +1,291 @@
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    SafeAreaView,
+    ScrollView,
+    Dimensions,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import Svg, { Circle } from 'react-native-svg';
+
+// ─── Paleta de colores ───────────────────────────────────────
+const COLORS = {
+    background: '#1a1d24',
+    surface: '#2c323d',
+    textPrimary: '#e0e1dd',
+    textSecondary: '#8e9aaf',
+    accent: '#6c63ff',
+    progress: '#4ecdc4',
+};
+
+// ─── Mock Data ───────────────────────────────────────────────
+const MOCK_GROUP = {
+    id: '1',
+    name: 'Study Squad',
+    invite_code: 'ABC123',
+    total_minutes: 120,
+    used_minutes: 45,
+    streak_days: 7,
+    best_streak: 14,
+    is_alive: true,
+    reset_period: 'daily' as const,
+};
+
+const MOCK_PARTICIPANTS = [
+    { id: '1', username: 'Carlos', minutes_used: 18 },
+    { id: '2', username: 'María', minutes_used: 15 },
+    { id: '3', username: 'Andrés', minutes_used: 12 },
+];
+
+// ─── Constantes del círculo ──────────────────────────────────
+const CIRCLE_SIZE = 200;
+const STROKE_WIDTH = 14;
+const RADIUS = (CIRCLE_SIZE - STROKE_WIDTH) / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+export default function GroupDetailScreen() {
+    const [showCode, setShowCode] = useState(false);
+
+    const { total_minutes, used_minutes, streak_days, name, invite_code } = MOCK_GROUP;
+    const remaining = total_minutes - used_minutes;
+    const usedRatio = used_minutes / total_minutes;
+    const progressOffset = CIRCUMFERENCE * (1 - usedRatio);
+
+    // ── Porcentaje para la barra lineal ──
+    const barPercent = (used_minutes / total_minutes) * 100;
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <StatusBar style="light" />
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* ── Cabecera ── */}
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        style={styles.titleRow}
+                        activeOpacity={0.7}
+                        onPress={() => setShowCode(!showCode)}
+                    >
+                        <Text style={styles.groupName}>{name}</Text>
+                        {showCode && (
+                            <View style={styles.codeBadge}>
+                                <Text style={styles.codeText}>{invite_code}</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+
+                    {/* ── Racha ── */}
+                    <Text style={styles.streak}>
+                        🔥 {streak_days} Días de racha
+                    </Text>
+                </View>
+
+                {/* ── Visualizador Circular ── */}
+                <View style={styles.circleContainer}>
+                    <Svg width={CIRCLE_SIZE} height={CIRCLE_SIZE}>
+                        {/* Fondo */}
+                        <Circle
+                            cx={CIRCLE_SIZE / 2}
+                            cy={CIRCLE_SIZE / 2}
+                            r={RADIUS}
+                            stroke={COLORS.surface}
+                            strokeWidth={STROKE_WIDTH}
+                            fill="none"
+                        />
+                        {/* Progreso (usado) */}
+                        <Circle
+                            cx={CIRCLE_SIZE / 2}
+                            cy={CIRCLE_SIZE / 2}
+                            r={RADIUS}
+                            stroke={COLORS.progress}
+                            strokeWidth={STROKE_WIDTH}
+                            fill="none"
+                            strokeDasharray={CIRCUMFERENCE}
+                            strokeDashoffset={progressOffset}
+                            strokeLinecap="round"
+                            rotation="-90"
+                            origin={`${CIRCLE_SIZE / 2}, ${CIRCLE_SIZE / 2}`}
+                        />
+                    </Svg>
+                    {/* Centro — minutos restantes */}
+                    <View style={styles.circleCenter}>
+                        <Text style={styles.circleNumber}>{remaining}</Text>
+                        <Text style={styles.circleLabel}>min restantes</Text>
+                    </View>
+                </View>
+
+                {/* ── Barra de Progreso Lineal ── */}
+                <View style={styles.barContainer}>
+                    <View style={styles.barBackground}>
+                        <View style={[styles.barFill, { width: `${barPercent}%` }]} />
+                        {/* Punto decorativo en la unión */}
+                        <View style={[styles.barDot, { left: `${barPercent}%` }]} />
+                    </View>
+                </View>
+
+                {/* ── Lista de Participantes ── */}
+                <View style={styles.participantsSection}>
+                    <Text style={styles.sectionTitle}>Participantes</Text>
+                    {MOCK_PARTICIPANTS.map((p) => (
+                        <View key={p.id} style={styles.participantRow}>
+                            {/* Avatar — inicial */}
+                            <View style={styles.avatar}>
+                                <Text style={styles.avatarText}>
+                                    {p.username.charAt(0).toUpperCase()}
+                                </Text>
+                            </View>
+                            <Text style={styles.participantName}>{p.username}</Text>
+                            <Text style={styles.participantMinutes}>
+                                {p.minutes_used} min
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+            </ScrollView>
+        </SafeAreaView>
+    );
+}
+
+// ─── Estilos ─────────────────────────────────────────────────
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background,
+    },
+    scrollContent: {
+        paddingHorizontal: 24,
+        paddingTop: 48,
+        paddingBottom: 40,
+    },
+
+    // ── Cabecera ──
+    header: {
+        marginBottom: 32,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+    },
+    groupName: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: COLORS.textPrimary,
+        letterSpacing: 0.5,
+    },
+    codeBadge: {
+        backgroundColor: COLORS.surface,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 8,
+        marginLeft: 12,
+    },
+    codeText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: COLORS.progress,
+        letterSpacing: 1,
+    },
+    streak: {
+        fontSize: 16,
+        color: COLORS.textSecondary,
+        marginTop: 8,
+    },
+
+    // ── Círculo ──
+    circleContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 32,
+    },
+    circleCenter: {
+        position: 'absolute',
+        alignItems: 'center',
+    },
+    circleNumber: {
+        fontSize: 42,
+        fontWeight: '700',
+        color: COLORS.textPrimary,
+    },
+    circleLabel: {
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        marginTop: 2,
+    },
+
+    // ── Barra lineal ──
+    barContainer: {
+        paddingHorizontal: 8,
+        marginBottom: 36,
+    },
+    barBackground: {
+        height: 6,
+        backgroundColor: COLORS.surface,
+        borderRadius: 3,
+        overflow: 'visible',
+        position: 'relative',
+    },
+    barFill: {
+        height: 6,
+        backgroundColor: COLORS.progress,
+        borderRadius: 3,
+    },
+    barDot: {
+        position: 'absolute',
+        top: -4,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: COLORS.textPrimary,
+        marginLeft: -7,
+        borderWidth: 2,
+        borderColor: COLORS.background,
+    },
+
+    // ── Participantes ──
+    participantsSection: {
+        backgroundColor: COLORS.surface,
+        borderRadius: 16,
+        padding: 20,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.textPrimary,
+        marginBottom: 16,
+    },
+    participantRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    avatar: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: COLORS.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 14,
+    },
+    avatarText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: COLORS.progress,
+    },
+    participantName: {
+        flex: 1,
+        fontSize: 15,
+        color: COLORS.textPrimary,
+    },
+    participantMinutes: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        fontWeight: '500',
+    },
+});

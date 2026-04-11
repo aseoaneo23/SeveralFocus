@@ -7,10 +7,14 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { joinGroup } from '../services/groupService';
+import { supabase } from '../lib/supabase';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'JoinGroup'>;
@@ -27,14 +31,29 @@ const COLORS = {
 export default function JoinGroupsScreen({ navigation }: Props) {
     const [groupCode, setGroupCode] = useState('');
     const [touched, setTouched] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const isValid = groupCode.trim().length > 0;
 
-    // Espacio para integración con el Backend (GroupCode)
-    const handleJoinGroup = () => {
+    // Integración con el Backend (GroupCode)
+    const handleJoinGroup = async () => {
         setTouched(true);
         if (!isValid) return;
-        console.log('Codigo del grupo:', groupCode);
-        navigation.navigate('GroupDetail');
+
+        setIsLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                throw new Error('Debes estar autenticado para unirte a un grupo');
+            }
+
+            await joinGroup(groupCode, user.id);
+            Alert.alert("¡Éxito!", "Te has unido al grupo correctamente");
+            navigation.navigate('GroupDetail');
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Ocurrió un error al unirse");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -55,6 +74,7 @@ export default function JoinGroupsScreen({ navigation }: Props) {
                     placeholderTextColor={COLORS.textSecondary}
                     value={groupCode}
                     onChangeText={setGroupCode}
+                    editable={!isLoading}
                 />
 
                 {/* ── Error ── */}
@@ -64,12 +84,16 @@ export default function JoinGroupsScreen({ navigation }: Props) {
 
                 {/* ── Botón ── */}
                 <TouchableOpacity
-                    style={[styles.button, !isValid && styles.buttonDisabled]}
+                    style={[styles.button, (!isValid || isLoading) && styles.buttonDisabled]}
                     activeOpacity={0.7}
                     onPress={handleJoinGroup}
-                    disabled={!isValid}
+                    disabled={!isValid || isLoading}
                 >
-                    <Text style={styles.buttonText}>Unirse al Grupo</Text>
+                    {isLoading ? (
+                        <ActivityIndicator color={COLORS.textPrimary} />
+                    ) : (
+                        <Text style={styles.buttonText}>Unirse al Grupo</Text>
+                    )}
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>

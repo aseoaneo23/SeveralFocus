@@ -158,8 +158,8 @@ export default function GroupDetailScreen() {
         };
     }, [groupId]);
 
-    // 3. Le pasamos el groupId al hook (debe destruturarse como objeto, no array)
-    const { group, loading } = useTimeService(groupId);
+    // 3. Le pasamos el groupId al hook
+    const { group, loading, activeSession, startSession, endSession } = useTimeService(groupId);
 
     // 4. Usamos los datos (Fallback a MOCK_GROUP si no han cargado)
     const total_minutes = group?.totalMinutes ?? MOCK_GROUP.total_minutes;
@@ -271,14 +271,29 @@ export default function GroupDetailScreen() {
                         {(bannedApps.length > 0 ? bannedApps : MOCK_GROUP.banned_apps).map((app) => (
                             <TouchableOpacity
                                 key={app}
-                                style={styles.appCircle}
+                                style={[
+                                    styles.appCircle,
+                                    activeSession?.appName === app && { borderWidth: 2, borderColor: COLORS.progress }
+                                ]}
                                 activeOpacity={0.7}
-                                onPress={() =>
-                                    Alert.alert(
-                                        '⏱ Simulando uso',
-                                        `Estás usando ${app}... El tiempo del grupo corre.`,
-                                    )
-                                }
+                                onPress={async () => {
+                                    if (activeSession?.appName === app) {
+                                        // Cierra la sesión si tocamos la app que ya está activa
+                                        await endSession();
+                                    } else if (!activeSession) {
+                                        // Inicia la sesión si no hay ninguna
+                                        await startSession(app);
+                                        Alert.alert(
+                                            '⏱ Simulando uso',
+                                            `Ahora estás "usando" ${app}. El tiempo está corriendo, vuelve a tocar para cerrar la sesión.`
+                                        );
+                                    } else {
+                                        Alert.alert(
+                                            '⚠️ Sesión activa',
+                                            `Ya estás usando ${activeSession.appName}. Ciérrala primero tocándola.`
+                                        );
+                                    }
+                                }}
                             >
                                 <Text style={styles.appCircleText}>
                                     {app.charAt(0).toUpperCase()}

@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle } from 'react-native-svg';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../navigation/AppNavigator';
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
     background: '#1a1d24',

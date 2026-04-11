@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 import { joinGroup } from '../services/groupService';
 import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../navigation/AppNavigator';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'JoinGroup'>;
@@ -46,9 +48,9 @@ export default function JoinGroupsScreen({ navigation }: Props) {
                 throw new Error('Debes estar autenticado para unirte a un grupo');
             }
 
-            await joinGroup(groupCode, user.id);
-            Alert.alert("¡Éxito!", "Te has unido al grupo correctamente");
-            navigation.navigate('GroupDetail');
+            const group = await joinGroup(groupCode, user.id);
+            await AsyncStorage.setItem(STORAGE_KEYS.GROUP_ID, group.id);
+            navigation.replace('GroupDetail');
         } catch (error: any) {
             Alert.alert("Error", error.message || "Ocurrió un error al unirse");
         } finally {

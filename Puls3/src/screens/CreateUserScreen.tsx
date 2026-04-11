@@ -7,22 +7,18 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
+    ActivityIndicator,
+    SafeAreaView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
+import { User, ArrowRight } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 import { OneSignal } from 'react-native-onesignal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../navigation/storage';
-
-// ─── Paleta de colores ───────────────────────────────────────
-const COLORS = {
-    background: '#000000',
-    surface: '#1A1A1A',
-    textPrimary: '#FFFFFF',
-    textSecondary: '#8A8A8A',
-};
+import { COLORS, SPACING, BORDER_RADIUS, FONTS } from '../theme';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'CreateUser'>;
@@ -31,35 +27,28 @@ type Props = {
 export default function CreateUserScreen({ navigation }: Props) {
     const [userName, setUserName] = useState('');
     const [touched, setTouched] = useState(false);
-    const isValid = userName.trim().length > 0;
+    const [isLoading, setIsLoading] = useState(false);
+    const isValid = userName.trim().length >= 3;
 
-    // Espacio para integración con el Backend
     const handleCreateUser = async () => {
         setTouched(true);
         if (!isValid) return;
 
         try {
-            // 1. Iniciar sesión anónimamente en Auth
+            setIsLoading(true);
             const { data, error } = await supabase.auth.signInAnonymously();
-
             if (error) throw error;
 
             const userId = data.user?.id;
-
             if (userId) {
-                // 2. Insertar el usuario en tu tabla pública "users"
                 const { error: insertError } = await supabase
                     .from('users')
                     .insert({ id: userId, username: userName });
                 if (insertError) throw insertError;
 
-                // 3. Guardar persistencia de sesión en AsyncStorage
                 await AsyncStorage.setItem(STORAGE_KEYS.USER_ID, userId);
-
-                // 4. Registrar este dispositivo en OneSignal con el UUID real
                 OneSignal.login(userId);
 
-                // 5. Navegar al Home
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'Home' }],
@@ -67,96 +56,129 @@ export default function CreateUserScreen({ navigation }: Props) {
             }
         } catch (error: any) {
             console.error('Error creando usuario:', error.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        <SafeAreaView style={styles.container}>
             <StatusBar style="light" />
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <View style={styles.centerContent}>
+                    <View style={styles.iconCircle}>
+                        <User size={48} color={COLORS.primary} />
+                    </View>
+                    
+                    <Text style={styles.title}>¿Cómo te llamas?</Text>
+                    <Text style={styles.subtitle}>
+                        Este nombre será visible para tus compañeros de grupo.
+                    </Text>
 
-            <View style={styles.content}>
-                {/* ── Título ── */}
-                <Text style={styles.title}>Nombre de Usuario</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Tu nombre o alias"
+                        placeholderTextColor={COLORS.textMuted}
+                        value={userName}
+                        onChangeText={setUserName}
+                        maxLength={20}
+                        editable={!isLoading}
+                    />
 
-                {/* ── Input ── */}
-                <TextInput
-                    style={styles.input}
-                    placeholder="Escribe tu nombre..."
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={userName}
-                    onChangeText={setUserName}
-                />
+                    {touched && !isValid && (
+                        <Text style={styles.errorText}>Mínimo 3 caracteres.</Text>
+                    )}
 
-                {/* ── Error ── */}
-                {touched && !isValid && (
-                    <Text style={styles.errorText}>El nombre no puede estar vacío</Text>
-                )}
-
-                {/* ── Botón ── */}
-                <TouchableOpacity
-                    style={[styles.button, !isValid && styles.buttonDisabled]}
-                    activeOpacity={0.7}
-                    onPress={handleCreateUser}
-                    disabled={!isValid}
-                >
-                    <Text style={styles.buttonText}>Crear Usuario</Text>
-                </TouchableOpacity>
-            </View>
-        </KeyboardAvoidingView>
+                    <TouchableOpacity
+                        style={[styles.primaryButton, (!isValid || isLoading) && styles.buttonDisabled]}
+                        onPress={handleCreateUser}
+                        disabled={!isValid || isLoading}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator color={COLORS.black} />
+                        ) : (
+                            <>
+                                <Text style={styles.buttonText}>Continuar</Text>
+                                <ArrowRight size={20} color={COLORS.black} />
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
-// ─── Estilos ─────────────────────────────────────────────────
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.background,
     },
-    content: {
+    centerContent: {
         flex: 1,
+        paddingHorizontal: SPACING.xl,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 32,
+    },
+    iconCircle: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: `${COLORS.primary}10`,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: SPACING.xl,
     },
     title: {
         fontSize: 28,
-        fontWeight: '700',
+        fontWeight: FONTS.bold as any,
         color: COLORS.textPrimary,
-        marginBottom: 32,
-        letterSpacing: 0.5,
+        marginBottom: SPACING.xs,
+        textAlign: 'center',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        marginBottom: SPACING.xxl,
+        paddingHorizontal: SPACING.lg,
     },
     input: {
         width: '100%',
         backgroundColor: COLORS.surface,
+        borderRadius: BORDER_RADIUS.lg,
+        padding: SPACING.lg,
         color: COLORS.textPrimary,
-        fontSize: 16,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        marginBottom: 20,
+        fontSize: 18,
+        textAlign: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
-    button: {
+    errorText: {
+        color: COLORS.error,
+        fontSize: 13,
+        marginTop: SPACING.sm,
+    },
+    primaryButton: {
+        flexDirection: 'row',
         width: '100%',
-        backgroundColor: COLORS.surface,
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: COLORS.primary,
+        borderRadius: BORDER_RADIUS.full,
+        height: 60,
         alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: SPACING.xxl,
+        gap: 8,
     },
     buttonDisabled: {
         opacity: 0.5,
     },
-    errorText: {
-        color: COLORS.textSecondary,
-        fontSize: 13,
-        marginBottom: 12,
-        alignSelf: 'flex-start',
-    },
     buttonText: {
-        color: COLORS.textPrimary,
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 18,
+        fontWeight: FONTS.bold as any,
+        color: COLORS.black,
     },
 });

@@ -9,34 +9,28 @@ import {
     Platform,
     Alert,
     ActivityIndicator,
+    SafeAreaView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
+import { ArrowLeft, Hash, ArrowRight } from 'lucide-react-native';
 import { joinGroup } from '../services/groupService';
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../navigation/storage';
+import { COLORS, SPACING, BORDER_RADIUS, FONTS } from '../theme';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'JoinGroup'>;
-};
-
-// ─── Paleta de colores ───────────────────────────────────────
-const COLORS = {
-    background: '#000000',
-    surface: '#1A1A1A',
-    textPrimary: '#FFFFFF',
-    textSecondary: '#8A8A8A',
 };
 
 export default function JoinGroupsScreen({ navigation }: Props) {
     const [groupCode, setGroupCode] = useState('');
     const [touched, setTouched] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const isValid = groupCode.trim().length > 0;
+    const isValid = groupCode.trim().length >= 6; // Assuming 6 chars min
 
-    // Integración con el Backend (GroupCode)
     const handleJoinGroup = async () => {
         setTouched(true);
         if (!isValid) return;
@@ -44,11 +38,9 @@ export default function JoinGroupsScreen({ navigation }: Props) {
         setIsLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                throw new Error('Debes estar autenticado para unirte a un grupo');
-            }
+            if (!user) throw new Error('Debes estar autenticado para unirte a un grupo');
 
-            const group = await joinGroup(groupCode, user.id);
+            const group = await joinGroup(groupCode.trim().toUpperCase(), user.id);
             await AsyncStorage.setItem(STORAGE_KEYS.GROUP_ID, group.id);
             navigation.replace('GroupDetail');
         } catch (error: any) {
@@ -59,97 +51,139 @@ export default function JoinGroupsScreen({ navigation }: Props) {
     };
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        <SafeAreaView style={styles.container}>
             <StatusBar style="light" />
-
-            <View style={styles.content}>
-                {/* ── Título ── */}
-                <Text style={styles.title}>Codigo de Grupo</Text>
-
-                {/* ── Input ── */}
-                <TextInput
-                    style={styles.input}
-                    placeholder="Escribe el codigo de tu grupo..."
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={groupCode}
-                    onChangeText={setGroupCode}
-                    editable={!isLoading}
-                />
-
-                {/* ── Error ── */}
-                {touched && !isValid && (
-                    <Text style={styles.errorText}>El código no puede estar vacío</Text>
-                )}
-
-                {/* ── Botón ── */}
-                <TouchableOpacity
-                    style={[styles.button, (!isValid || isLoading) && styles.buttonDisabled]}
-                    activeOpacity={0.7}
-                    onPress={handleJoinGroup}
-                    disabled={!isValid || isLoading}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator color={COLORS.textPrimary} />
-                    ) : (
-                        <Text style={styles.buttonText}>Unirse al Grupo</Text>
-                    )}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ArrowLeft color={COLORS.textPrimary} size={24} />
                 </TouchableOpacity>
+                <Text style={styles.headerTitle}>Unirse a Grupo</Text>
             </View>
-        </KeyboardAvoidingView>
+
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <View style={styles.content}>
+                    <View style={styles.iconContainer}>
+                        <Hash size={48} color={COLORS.primary} />
+                    </View>
+                    
+                    <Text style={styles.title}>Código de Invitación</Text>
+                    <Text style={styles.subtitle}>
+                        Ingresa el código de 6 dígitos que te proporcionó el creador del grupo.
+                    </Text>
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="ABC123"
+                        placeholderTextColor={COLORS.textMuted}
+                        value={groupCode}
+                        onChangeText={setGroupCode}
+                        autoCapitalize="characters"
+                        maxLength={6}
+                        editable={!isLoading}
+                    />
+
+                    {touched && !isValid && (
+                        <Text style={styles.errorText}>Ingresa un código válido de 6 caracteres.</Text>
+                    )}
+
+                    <TouchableOpacity
+                        style={[styles.joinButton, (!isValid || isLoading) && styles.buttonDisabled]}
+                        onPress={handleJoinGroup}
+                        disabled={!isValid || isLoading}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator color={COLORS.black} />
+                        ) : (
+                            <>
+                                <Text style={styles.joinButtonText}>Unirse ahora</Text>
+                                <ArrowRight size={20} color={COLORS.black} />
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
-// ─── Estilos ─────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
+    container: { flex: 1, backgroundColor: COLORS.background },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: SPACING.md,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: FONTS.bold as any,
+        color: COLORS.textPrimary,
+        marginLeft: SPACING.md,
     },
     content: {
         flex: 1,
+        padding: SPACING.xl,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    iconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: `${COLORS.primary}10`,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 32,
+        marginBottom: SPACING.xl,
     },
     title: {
-        fontSize: 28,
-        fontWeight: '700',
+        fontSize: 24,
+        fontWeight: FONTS.bold as any,
         color: COLORS.textPrimary,
-        marginBottom: 32,
-        letterSpacing: 0.5,
+        marginBottom: SPACING.sm,
+    },
+    subtitle: {
+        fontSize: 16,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        lineHeight: 24,
+        marginBottom: SPACING.xxl,
     },
     input: {
         width: '100%',
         backgroundColor: COLORS.surface,
+        borderRadius: BORDER_RADIUS.lg,
+        padding: SPACING.lg,
         color: COLORS.textPrimary,
-        fontSize: 16,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        marginBottom: 20,
+        fontSize: 32,
+        fontWeight: FONTS.bold as any,
+        textAlign: 'center',
+        letterSpacing: 8,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
-    button: {
+    errorText: { color: COLORS.error, fontSize: 13, marginTop: SPACING.sm },
+    joinButton: {
+        flexDirection: 'row',
         width: '100%',
-        backgroundColor: COLORS.surface,
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: COLORS.primary,
+        borderRadius: BORDER_RADIUS.full,
+        height: 60,
         alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: SPACING.xxl,
+        gap: 8,
     },
-    buttonDisabled: {
-        opacity: 0.5,
-    },
-    errorText: {
-        color: COLORS.textSecondary,
-        fontSize: 13,
-        marginBottom: 12,
-        alignSelf: 'flex-start',
-    },
-    buttonText: {
-        color: COLORS.textPrimary,
-        fontSize: 16,
-        fontWeight: '600',
-    },
+    buttonDisabled: { opacity: 0.5 },
+    joinButtonText: { fontSize: 18, fontWeight: FONTS.bold as any, color: COLORS.black },
 });

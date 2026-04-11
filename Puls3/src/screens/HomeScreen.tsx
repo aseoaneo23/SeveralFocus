@@ -9,21 +9,14 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+import { PlusCircle, Users, LayoutDashboard, LogOut } from 'lucide-react-native';
+import { supabase } from '../lib/supabase';
+import { COLORS, SPACING, BORDER_RADIUS, FONTS } from '../theme';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
-import { supabase } from '../lib/supabase';
 
 type HomeScreenProps = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
-};
-
-// ─── Paleta de colores ───────────────────────────────────────
-const COLORS = {
-    background: '#000000',
-    surface: '#1A1A1A',
-    textPrimary: '#FFFFFF',
-    textSecondary: '#8A8A8A',
-    accent: '#F5F5F5',
 };
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
@@ -78,8 +71,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         return (
             <SafeAreaView style={styles.container}>
                 <StatusBar style="light" />
-                <View style={[styles.content, { justifyContent: 'center' }]}>
-                    <ActivityIndicator size="large" color={COLORS.accent} />
+                <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <Text style={styles.loadingText}>Cargando datos...</Text>
                 </View>
             </SafeAreaView>
         );
@@ -90,50 +84,68 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             <StatusBar style="light" />
 
             <View style={styles.content}>
-                {/* ── Título ── */}
-                <Text style={styles.title}>Grupo</Text>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Control</Text>
+                    <Text style={[styles.title, { color: COLORS.primary }]}>Social</Text>
+                </View>
 
-                {/* ── Subtítulo ── */}
                 <Text style={styles.subtitle}>
                     {userGroupId
-                        ? 'Gestiona tu participación en el grupo'
-                        : 'Selecciona una opción para comenzar'}
+                        ? 'Estás listo para continuar con tu grupo de enfoque.'
+                        : 'Elige cómo quieres empezar a mejorar tu productividad hoy.'}
                 </Text>
 
-                {/* ── Botón Crear Grupo ── */}
-                <View style={{ width: '100%' }}>
+                <View style={styles.cardsContainer}>
                     <TouchableOpacity
-                        style={[styles.button, userGroupId && styles.buttonDisabled]}
-                        activeOpacity={0.7}
+                        style={[styles.card, userGroupId && styles.cardDisabled]}
+                        activeOpacity={0.8}
                         onPress={handleCreateGroup}
                         disabled={!!userGroupId}
                     >
-                        <Text style={styles.buttonText}>Crear Grupo</Text>
+                        <View style={[styles.iconBox, { backgroundColor: `${COLORS.primary}15` }]}>
+                            <PlusCircle size={28} color={COLORS.primary} />
+                        </View>
+                        <View style={styles.cardInfo}>
+                            <Text style={styles.cardTitle}>Crear Grupo</Text>
+                            <Text style={styles.cardDesc}>Inicia tu propia comunidad de enfoque.</Text>
+                        </View>
                     </TouchableOpacity>
 
-                    {userGroupId && (
-                        <Text style={styles.infoText}>
-                            Ya perteneces a un grupo. Debes salir de este para crear uno nuevo.
-                        </Text>
-                    )}
+                    <TouchableOpacity
+                        style={styles.card}
+                        activeOpacity={0.8}
+                        onPress={handleActionGroup}
+                    >
+                        <View style={[styles.iconBox, { backgroundColor: userGroupId ? `${COLORS.success}15` : `${COLORS.secondary}15` }]}>
+                            {userGroupId ? (
+                                <LayoutDashboard size={28} color={COLORS.success} />
+                            ) : (
+                                <Users size={28} color={COLORS.secondary} />
+                            )}
+                        </View>
+                        <View style={styles.cardInfo}>
+                            <Text style={styles.cardTitle}>
+                                {userGroupId ? 'Mi Dashboard' : 'Unirse a Grupo'}
+                            </Text>
+                            <Text style={styles.cardDesc}>
+                                {userGroupId ? 'Ver estadísticas y progreso actual.' : 'Busca un grupo existente con un código.'}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
-                {/* ── Botón Dinámico (Unirme / Ver Grupo) ── */}
-                <TouchableOpacity
-                    style={[styles.button, { marginTop: 8 }]}
-                    activeOpacity={0.7}
-                    onPress={handleActionGroup}
-                >
-                    <Text style={styles.buttonText}>
-                        {userGroupId ? 'Ver mi grupo' : 'Unirse a un Grupo'}
-                    </Text>
-                </TouchableOpacity>
+                {userGroupId && (
+                    <View style={styles.infoBox}>
+                        <Text style={styles.infoText}>
+                            Ya eres miembro de un grupo. Sal para unirte a otro o crear uno nuevo.
+                        </Text>
+                    </View>
+                )}
             </View>
         </SafeAreaView>
     );
 }
 
-// ─── Estilos ─────────────────────────────────────────────────
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -141,43 +153,84 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+        paddingHorizontal: SPACING.xl,
         justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 32,
+    },
+    header: {
+        flexDirection: 'row',
+        marginBottom: SPACING.sm,
     },
     title: {
-        fontSize: 32,
-        fontWeight: '700',
+        fontSize: 40,
+        fontWeight: FONTS.bold as any,
         color: COLORS.textPrimary,
-        marginBottom: 8,
-        letterSpacing: 0.5,
+        marginRight: 10,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: 16,
         color: COLORS.textSecondary,
-        marginBottom: 40,
+        marginBottom: SPACING.xxl,
+        lineHeight: 24,
     },
-    button: {
-        width: '100%',
-        backgroundColor: COLORS.surface,
-        paddingVertical: 18,
-        borderRadius: 12,
+    cardsContainer: {
+        gap: SPACING.md,
+    },
+    card: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        backgroundColor: COLORS.surface,
+        padding: SPACING.lg,
+        borderRadius: BORDER_RADIUS.xl,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
-    buttonDisabled: {
+    cardDisabled: {
         opacity: 0.5,
     },
-    buttonText: {
+    iconBox: {
+        width: 56,
+        height: 56,
+        borderRadius: BORDER_RADIUS.md,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: SPACING.lg,
+    },
+    cardInfo: {
+        flex: 1,
+    },
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: FONTS.semiBold as any,
         color: COLORS.textPrimary,
-        fontSize: 16,
-        fontWeight: '600',
+        marginBottom: 4,
+    },
+    cardDesc: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+    },
+    infoBox: {
+        marginTop: SPACING.xl,
+        padding: SPACING.md,
+        backgroundColor: 'rgba(205, 255, 0, 0.05)',
+        borderRadius: BORDER_RADIUS.md,
+        borderWidth: 1,
+        borderColor: 'rgba(205, 255, 0, 0.1)',
     },
     infoText: {
         fontSize: 12,
-        color: COLORS.textSecondary,
+        color: COLORS.primary,
         textAlign: 'center',
-        marginBottom: 20,
-        paddingHorizontal: 10,
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: COLORS.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        color: COLORS.textPrimary,
+        fontSize: 16,
+        fontWeight: FONTS.medium as any,
+        marginTop: SPACING.md,
     },
 });

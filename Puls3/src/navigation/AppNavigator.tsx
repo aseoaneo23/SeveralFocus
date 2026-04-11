@@ -8,15 +8,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { STORAGE_KEYS } from './storage'
 import { RootStackParamList } from './types'
+import OnboardingScreen from '../screens/OnboardingScreen'
 import CreateUserScreen from '../screens/CreateUserScreen'
 import HomeScreen from '../screens/HomeScreen'
 import CreateGroupScreen from '../screens/CreateGroupScreen'
 import JoinGroupsScreen from '../screens/JoinGroupsScreen'
 import GroupDetailScreen from '../screens/GroupDetailScreen'
 
-const COLORS = { background: '#1a1d24', detail: '#8e9aaf' }
+const COLORS = { background: '#0F0F12', detail: '#CDFF00' }
 
-type InitialRoute = 'CreateUser' | 'Home' | 'GroupDetail' | null
+type InitialRoute = 'Onboarding' | 'CreateUser' | 'Home' | 'GroupDetail' | null
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
@@ -34,16 +35,22 @@ export default function AppNavigator() {
   useEffect(() => {
     const check = async () => {
       try {
-        const [[, userId], [, groupId]] = await AsyncStorage.multiGet([
+        const [
+          [, hasOnboarded],
+          [, userId],
+          [, groupId]
+        ] = await AsyncStorage.multiGet([
+          STORAGE_KEYS.HAS_ONBOARDED,
           STORAGE_KEYS.USER_ID,
           STORAGE_KEYS.GROUP_ID,
         ])
 
-        if (!userId) setInitialRoute('CreateUser')
+        if (!hasOnboarded) setInitialRoute('Onboarding')
+        else if (!userId) setInitialRoute('CreateUser')
         else if (!groupId) setInitialRoute('Home')
         else setInitialRoute('GroupDetail')
       } catch {
-        setInitialRoute('CreateUser')
+        setInitialRoute('Onboarding')
       }
     }
     check()
@@ -61,6 +68,7 @@ export default function AppNavigator() {
           contentStyle: { backgroundColor: COLORS.background },
         }}
       >
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="CreateUser" component={CreateUserScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />

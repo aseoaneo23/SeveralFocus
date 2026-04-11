@@ -10,26 +10,31 @@ import {
     SafeAreaView,
     ScrollView,
     Dimensions,
+    ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../navigation/storage';
 import { leaveGroup, deleteGroup } from '../services/groupService';
+import { COLORS, SPACING, BORDER_RADIUS, FONTS } from '../theme';
+import { 
+    Flame, 
+    Trash2, 
+    LogOut, 
+    X, 
+    Smartphone, 
+    Activity,
+    Info,
+    Copy,
+    Users as UsersIcon
+} from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'GroupDetail'>;
-};
-// ─── Paleta de colores ───────────────────────────────────────
-const COLORS = {
-    background: '#000000',
-    surface: '#1A1A1A',
-    textPrimary: '#FFFFFF',
-    textSecondary: '#8A8A8A',
-    accent: '#F5F5F5',
-    progress: '#CDFF00',
 };
 
 // ─── Mock Data ───────────────────────────────────────────────
@@ -53,8 +58,8 @@ const MOCK_PARTICIPANTS = [
 ];
 
 // ─── Constantes del círculo ──────────────────────────────────
-const CIRCLE_SIZE = 200;
-const STROKE_WIDTH = 14;
+const CIRCLE_SIZE = 220;
+const STROKE_WIDTH = 12;
 const RADIUS = (CIRCLE_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -71,13 +76,10 @@ export default function GroupDetailScreen({ navigation }: Props) {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                // 1. Le preguntas a Supabase quién es el usuario que está usando la app
                 const { data: { user }, error: authError } = await supabase.auth.getUser();
                 if (authError || !user) throw new Error("No hay un usuario autenticado");
+                setUserId(user.id);
 
-                setUserId(user.id); // Guardamos la ID para el timeService
-
-                // Fetch the username for push notification metadata
                 const { data: userData } = await supabase
                     .from('users')
                     .select('username')
@@ -85,7 +87,6 @@ export default function GroupDetailScreen({ navigation }: Props) {
                     .single();
                 if (userData?.username) setUsername(userData.username);
 
-                // 2. Buscamos el grupo al que pertenece el usuario
                 const { data: membership } = await supabase
                     .from('memberships')
                     .select('group_id')
@@ -103,7 +104,6 @@ export default function GroupDetailScreen({ navigation }: Props) {
         fetchUser();
     }, []);
 
-    // ── Fetch datos del grupo (invite_code, banned_apps) y participantes ──
     useEffect(() => {
         if (!groupId) return;
 
@@ -151,15 +151,13 @@ export default function GroupDetailScreen({ navigation }: Props) {
                 if (membershipsData) {
                     const now = new Date();
                     const formattedUsers = membershipsData
-                        .filter((m: any) => m.users) // Nos aseguramos de que el usuario exista
+                        .filter((m: any) => m.users)
                         .map((m: any) => {
                             const userSessions = sessionsData?.filter((s: any) => s.user_id === m.user_id) || [];
-
                             const totalMinutesToday = userSessions.reduce((sum: number, s: any) => {
                                 if (s.minutes_used !== null) {
                                     return sum + s.minutes_used;
                                 } else if (s.started_at && !s.ended_at) {
-                                    // Sesión activa: calcular minutos transcurridos hasta ahora
                                     const start = new Date(s.started_at);
                                     const elapsedMs = now.getTime() - start.getTime();
                                     return sum + Math.max(0, elapsedMs / (1000 * 60));
@@ -183,136 +181,76 @@ export default function GroupDetailScreen({ navigation }: Props) {
         fetchGroupExtras();
         fetchUsersFromGroup();
 
-        // Si tenemos groupId, nos suscribimos a los cambios en tiempo real
         if (!groupId) return;
 
         const channel = supabase
             .channel(`group-details-${groupId}-${Date.now()}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*', // Escuchar INSERT, UPDATE, DELETE
-                    schema: 'public',
-                    table: 'memberships',
-                    filter: `group_id=eq.${groupId}`,
-                },
-                (payload) => {
-                    console.log('Cambio detectado en membresías:', payload);
-                    fetchUsersFromGroup(); // Recarga la lista inmediatamente
-                }
-            )
-            .on(
-                'postgres_changes',
-                {
-                    event: '*', // Escuchar INSERT, UPDATE
-                    schema: 'public',
-                    table: 'sessions',
-                    filter: `group_id=eq.${groupId}`,
-                },
-                (payload) => {
-                    console.log('Cambio detectado en sesiones:', payload);
-                    fetchUsersFromGroup(); // Actualiza los minutos cuando se cierra una sesión
-                }
-            )
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'memberships', filter: `group_id=eq.${groupId}` }, () => fetchUsersFromGroup())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `group_id=eq.${groupId}` }, () => fetchUsersFromGroup())
             .subscribe();
 
-        // Importante: Limpiar la suscripción cuando el usuario sale de la pantalla
         return () => {
             supabase.removeChannel(channel);
         };
     }, [groupId]);
 
-    // 3. Le pasamos el groupId y el userId al hook
     const { group, loading, activeSession, startSession, endSession } = useTimeService(groupId, userId, username);
 
     const handleScrollingFoo = async (app: string) => {
         if (!isScrolling) {
             setIsScrolling(true);
-            Alert.alert(
-                '⏱ Simulando uso',
-                `Estás usando ${app}... El tiempo del grupo corre.`
-            );
             await startSession(app);
         } else {
             setIsScrolling(false);
-            Alert.alert(
-                '⏹️ Simulacro detenido',
-                `Has dejado de usar la app.`
-            );
             await endSession();
         }
     };
 
-    // 4. Usamos los datos (Fallback a MOCK_GROUP si no han cargado)
+    const copyToClipboard = async () => {
+        await Clipboard.setStringAsync(inviteCode);
+        Alert.alert('Copiado', 'Código de invitación copiado al portapapeles.');
+    };
+
     const total_minutes = group?.totalMinutes ?? MOCK_GROUP.total_minutes;
     const used_minutes = group?.usedMinutes ?? MOCK_GROUP.used_minutes;
     const streak_days = group?.streakDays ?? MOCK_GROUP.streak_days;
     const name = group?.name ?? MOCK_GROUP.name;
-    const remaining = total_minutes - used_minutes;
-    const usedRatio = used_minutes / total_minutes;
+    const remaining = Math.max(0, total_minutes - used_minutes);
+    const usedRatio = Math.min(1, used_minutes / total_minutes);
     const progressOffset = CIRCUMFERENCE * (1 - usedRatio);
 
-    // ── Porcentaje para la barra lineal ──
-    const barPercent = (used_minutes / total_minutes) * 100;
-
-    const handleGoHome = () => {
-        navigation.navigate('Home');
-    };
+    const handleGoHome = () => navigation.navigate('Home');
 
     const handleAbandonGroup = async () => {
         if (!userId || !groupId) return;
-
-        Alert.alert(
-            'Abandonar grupo',
-            'Saldrás definitivamente de este grupo. ¿Estás seguro?',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Abandonar',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await leaveGroup(userId, groupId);
-                            await AsyncStorage.removeItem(STORAGE_KEYS.GROUP_ID);
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'Home' }],
-                            });
-                        } catch (error: any) {
-                            Alert.alert('Error', 'No se pudo abandonar el grupo: ' + error.message);
-                        }
-                    },
+        Alert.alert('Abandonar grupo', '¿Estás seguro?', [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Abandonar',
+                style: 'destructive',
+                onPress: async () => {
+                    await leaveGroup(userId, groupId);
+                    await AsyncStorage.removeItem(STORAGE_KEYS.GROUP_ID);
+                    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
                 },
-            ]
-        );
+            },
+        ]);
     };
 
     const handleDeleteGroup = async () => {
         if (!groupId) return;
-
-        Alert.alert(
-            'Borrar grupo',
-            'Se eliminará el grupo y a todos sus participantes definitivamente. ¿Estás seguro?',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Eliminar',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await deleteGroup(groupId);
-                            await AsyncStorage.removeItem(STORAGE_KEYS.GROUP_ID);
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'Home' }],
-                            });
-                        } catch (error: any) {
-                            Alert.alert('Error', 'No se pudo eliminar el grupo: ' + error.message);
-                        }
-                    },
+        Alert.alert('Borrar grupo', 'Se eliminará definitivamente. ¿Estás seguro?', [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Eliminar',
+                style: 'destructive',
+                onPress: async () => {
+                    await deleteGroup(groupId);
+                    await AsyncStorage.removeItem(STORAGE_KEYS.GROUP_ID);
+                    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
                 },
-            ]
-        );
+            },
+        ]);
     };
 
     const isOwner = group?.createdBy === userId;
@@ -320,360 +258,186 @@ export default function GroupDetailScreen({ navigation }: Props) {
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar style="light" />
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* ── Cabecera ── */}
-                <View style={styles.header}>
-                    <View style={styles.headerTopRow}>
-                        <TouchableOpacity
-                            style={styles.titleRow}
-                            activeOpacity={0.7}
-                            onPress={() => setShowCode(!showCode)}
-                        >
-                            <Text style={styles.groupName}>{name}</Text>
+            
+            <View style={styles.topHeader}>
+                <TouchableOpacity onPress={handleGoHome} style={styles.backButton}>
+                    <X color={COLORS.textPrimary} size={24} />
+                </TouchableOpacity>
+                <View style={styles.headerTitleContainer}>
+                    <Text style={styles.groupName} numberOfLines={1}>{name}</Text>
+                    <TouchableOpacity onPress={() => setShowCode(!showCode)} style={styles.codeIndicator}>
+                        <Info size={14} color={COLORS.primary} />
+                        <Text style={styles.codeIndicatorText}>Información del grupo</Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.headerActions}>
+                    {isOwner ? (
+                        <TouchableOpacity onPress={handleDeleteGroup} style={styles.iconButton}>
+                            <Trash2 color={COLORS.error} size={20} />
                         </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={handleAbandonGroup} style={styles.iconButton}>
+                            <LogOut color={COLORS.error} size={20} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </View>
 
-                        <View style={styles.headerButtons}>
-                            {isOwner && (
-                                <TouchableOpacity
-                                    style={styles.deleteButton}
-                                    onPress={handleDeleteGroup}
-                                >
-                                    <View style={styles.trashCircle}>
-                                        <Text style={{ fontSize: 10 }}>🗑️</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            )}
-
-                            {!isOwner && (
-                                <TouchableOpacity
-                                    style={styles.abandonButton}
-                                    onPress={handleAbandonGroup}
-                                >
-                                    <Text style={styles.abandonButtonText}>Abandonar</Text>
-                                </TouchableOpacity>
-                            )}
-
-                            <TouchableOpacity
-                                style={styles.exitButton}
-                                onPress={handleGoHome}
-                            >
-                                <Text style={styles.exitButtonText}>Salir</Text>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {showCode && (
+                    <View style={styles.infoCard}>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Código de invitación</Text>
+                            <TouchableOpacity onPress={copyToClipboard} style={styles.copyBox}>
+                                <Text style={styles.codeText}>{inviteCode}</Text>
+                                <Copy size={16} color={COLORS.primary} />
                             </TouchableOpacity>
                         </View>
-                    </View>
-
-                    {showCode && (
-                        <View style={styles.codeBadge}>
-                            <Text style={styles.codeText}>{inviteCode}</Text>
+                        <View style={styles.infoDivider} />
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Estado</Text>
+                            <View style={styles.statusBadge}>
+                                <View style={styles.statusDot} />
+                                <Text style={styles.statusText}>Activo</Text>
+                            </View>
                         </View>
-                    )}
+                    </View>
+                )}
 
-                    {/* ── Racha ── */}
-                    <Text style={styles.streak}>
-                        🔥 {streak_days} Días de racha
-                    </Text>
+                <View style={styles.streakContainer}>
+                    <Flame color={COLORS.primary} fill={COLORS.primary} size={20} />
+                    <Text style={styles.streakText}>{streak_days} Días de racha</Text>
                 </View>
 
-                {/* ── Visualizador Circular ── */}
                 <View style={styles.circleContainer}>
                     <Svg width={CIRCLE_SIZE} height={CIRCLE_SIZE}>
-                        {/* Fondo */}
-                        <Circle
-                            cx={CIRCLE_SIZE / 2}
-                            cy={CIRCLE_SIZE / 2}
-                            r={RADIUS}
-                            stroke={COLORS.surface}
-                            strokeWidth={STROKE_WIDTH}
-                            fill="none"
-                        />
-                        {/* Progreso (usado) */}
-                        <Circle
-                            cx={CIRCLE_SIZE / 2}
-                            cy={CIRCLE_SIZE / 2}
-                            r={RADIUS}
-                            stroke={COLORS.progress}
-                            strokeWidth={STROKE_WIDTH}
-                            fill="none"
-                            strokeDasharray={CIRCUMFERENCE}
-                            strokeDashoffset={progressOffset}
-                            strokeLinecap="round"
-                            rotation="-90"
-                            origin={`${CIRCLE_SIZE / 2}, ${CIRCLE_SIZE / 2}`}
+                        <Circle cx={CIRCLE_SIZE/2} cy={CIRCLE_SIZE/2} r={RADIUS} stroke={COLORS.surfaceLight} strokeWidth={STROKE_WIDTH} fill="none" />
+                        <Circle 
+                            cx={CIRCLE_SIZE/2} cy={CIRCLE_SIZE/2} r={RADIUS} 
+                            stroke={COLORS.primary} strokeWidth={STROKE_WIDTH} fill="none"
+                            strokeDasharray={CIRCUMFERENCE} strokeDashoffset={progressOffset}
+                            strokeLinecap="round" rotation="-90" origin={`${CIRCLE_SIZE/2}, ${CIRCLE_SIZE/2}`}
                         />
                     </Svg>
-                    {/* Centro — minutos restantes */}
                     <View style={styles.circleCenter}>
                         <Text style={styles.circleNumber}>{remaining}</Text>
                         <Text style={styles.circleLabel}>min restantes</Text>
                     </View>
                 </View>
 
-                {/* ── Barra de Progreso Lineal ── */}
-                <View style={styles.barContainer}>
-                    <View style={styles.barBackground}>
-                        <View style={[styles.barFill, { width: `${barPercent}%` }]} />
-                        {/* Punto decorativo en la unión */}
-                        <View style={[styles.barDot, { left: `${barPercent}%` }]} />
-                    </View>
+                <View style={styles.sectionHeader}>
+                    <UsersIcon size={20} color={COLORS.textSecondary} />
+                    <Text style={styles.sectionTitle}>Participantes</Text>
                 </View>
 
-                {/* ── Lista de Participantes ── */}
-                <View style={styles.participantsSection}>
-                    <Text style={styles.sectionTitle}>Participantes</Text>
+                <View style={styles.participantsList}>
                     {(participants.length > 0 ? participants : MOCK_PARTICIPANTS).map((p) => (
                         <View key={p.id} style={styles.participantRow}>
-                            {/* Avatar — inicial */}
                             <View style={styles.avatar}>
-                                <Text style={styles.avatarText}>
-                                    {p.username.charAt(0).toUpperCase()}
-                                </Text>
+                                <Text style={styles.avatarText}>{p.username.charAt(0).toUpperCase()}</Text>
                             </View>
-                            <Text style={styles.participantName}>{p.username}</Text>
-                            <Text style={styles.participantMinutes}>
-                                {p.minutes_used} min
-                            </Text>
+                            <View style={styles.participantMeta}>
+                                <Text style={styles.participantName}>{p.username}</Text>
+                                <View style={styles.participantProgressContainer}>
+                                    <View style={styles.pProgressBar}>
+                                        <View style={[styles.pProgressFill, { width: `${Math.min(100, (p.minutes_used / total_minutes) * 100)}%` }]} />
+                                    </View>
+                                </View>
+                            </View>
+                            <Text style={styles.participantMinutes}>{p.minutes_used} min</Text>
                         </View>
                     ))}
                 </View>
 
-                {/* ── Simulador de Apps Prohibidas ── */}
-                <View style={styles.bannedAppsSection}>
-                    <Text style={styles.sectionTitle}>Simular uso de app</Text>
-                    <View style={styles.bannedAppsRow}>
-                        {(bannedApps.length > 0 ? bannedApps : MOCK_GROUP.banned_apps).map((app) => (
-                            <TouchableOpacity
-                                key={app}
-                                style={[
-                                    styles.appCircle,
-                                    activeSession?.appName === app && { borderWidth: 2, borderColor: COLORS.progress }
-                                ]}
-                                activeOpacity={0.7}
-                                onPress={() => handleScrollingFoo(app)}
-                            >
-                                <Text style={styles.appCircleText}>
-                                    {app.charAt(0).toUpperCase()}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+                <View style={[styles.sectionHeader, { marginTop: SPACING.xl }]}>
+                    <Smartphone size={20} color={COLORS.textSecondary} />
+                    <Text style={styles.sectionTitle}>Simular Uso de App</Text>
+                </View>
+
+                <View style={styles.appsGrid}>
+                    {(bannedApps.length > 0 ? bannedApps : MOCK_GROUP.banned_apps).map((app) => (
+                        <TouchableOpacity
+                            key={app}
+                            style={[
+                                styles.appCard,
+                                activeSession?.appName === app && styles.appCardActive
+                            ]}
+                            onPress={() => handleScrollingFoo(app)}
+                        >
+                            <View style={[styles.appIcon, { backgroundColor: activeSession?.appName === app ? COLORS.primary : COLORS.surfaceLight }]}>
+                                <Activity size={24} color={activeSession?.appName === app ? COLORS.black : COLORS.textPrimary} />
+                            </View>
+                            <Text style={styles.appName} numberOfLines={1}>{app}</Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
             </ScrollView>
+
+            {loading && (
+                <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            )}
         </SafeAreaView>
     );
 }
 
-// ─── Estilos ─────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    scrollContent: {
-        paddingHorizontal: 24,
-        paddingTop: 48,
-        paddingBottom: 40,
-    },
-
-    // ── Cabecera ──
-    header: {
-        marginBottom: 32,
-    },
-    headerTopRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerButtons: {
+    container: { flex: 1, backgroundColor: COLORS.background },
+    topHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: SPACING.md,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
     },
-    abandonButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: 'rgba(142, 154, 175, 0.1)',
+    backButton: { padding: 4 },
+    headerTitleContainer: { flex: 1, alignItems: 'center' },
+    groupName: { fontSize: 18, fontWeight: FONTS.bold as any, color: COLORS.textPrimary },
+    codeIndicator: { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 },
+    codeIndicatorText: { fontSize: 12, color: COLORS.textSecondary },
+    headerActions: { flexDirection: 'row', gap: 12 },
+    iconButton: { padding: 4 },
+    scrollContent: { padding: SPACING.lg, paddingBottom: 100 },
+    infoCard: {
+        backgroundColor: COLORS.surface,
+        borderRadius: BORDER_RADIUS.lg,
+        padding: SPACING.md,
+        marginBottom: SPACING.lg,
         borderWidth: 1,
-        borderColor: 'rgba(142, 154, 175, 0.3)',
+        borderColor: COLORS.border,
     },
-    abandonButtonText: {
-        color: COLORS.textSecondary,
-        fontWeight: '600',
-        fontSize: 12,
-    },
-    deleteButton: {
-        padding: 8,
-    },
-    trashCircle: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255, 69, 58, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 69, 58, 0.3)',
-    },
-    exitButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: 'rgba(255, 69, 58, 0.1)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 69, 58, 0.3)',
-    },
-    exitButtonText: {
-        color: '#ff453a',
-        fontWeight: '600',
-        fontSize: 12,
-    },
-    titleRow: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-    },
-    groupName: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: COLORS.textPrimary,
-        letterSpacing: 0.5,
-    },
-    codeBadge: {
-        backgroundColor: COLORS.surface,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-        marginTop: 8,
-        alignSelf: 'flex-start',
-    },
-    codeText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: COLORS.progress,
-        letterSpacing: 1,
-    },
-    streak: {
-        fontSize: 16,
-        color: COLORS.textSecondary,
-        marginTop: 8,
-    },
-
-    // ── Círculo ──
-    circleContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 32,
-    },
-    circleCenter: {
-        position: 'absolute',
-        alignItems: 'center',
-    },
-    circleNumber: {
-        fontSize: 42,
-        fontWeight: '700',
-        color: COLORS.textPrimary,
-    },
-    circleLabel: {
-        fontSize: 13,
-        color: COLORS.textSecondary,
-        marginTop: 2,
-    },
-
-    // ── Barra lineal ──
-    barContainer: {
-        paddingHorizontal: 8,
-        marginBottom: 36,
-    },
-    barBackground: {
-        height: 6,
-        backgroundColor: COLORS.surface,
-        borderRadius: 3,
-        overflow: 'visible',
-        position: 'relative',
-    },
-    barFill: {
-        height: 6,
-        backgroundColor: COLORS.progress,
-        borderRadius: 3,
-    },
-    barDot: {
-        position: 'absolute',
-        top: -4,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: COLORS.textPrimary,
-        marginLeft: -7,
-        borderWidth: 2,
-        borderColor: COLORS.background,
-    },
-
-    // ── Participantes ──
-    participantsSection: {
-        backgroundColor: COLORS.surface,
-        borderRadius: 16,
-        padding: 20,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: COLORS.textPrimary,
-        marginBottom: 16,
-    },
-    participantRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 14,
-    },
-    avatar: {
-        width: 38,
-        height: 38,
-        borderRadius: 19,
-        backgroundColor: COLORS.background,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 14,
-    },
-    avatarText: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: COLORS.progress,
-    },
-    participantName: {
-        flex: 1,
-        fontSize: 15,
-        color: COLORS.textPrimary,
-    },
-    participantMinutes: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        fontWeight: '500',
-    },
-
-    // ── Apps Prohibidas ──
-    bannedAppsSection: {
-        marginTop: 24,
-    },
-    bannedAppsRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
-    },
-    appCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: COLORS.surface,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    appCircleText: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: COLORS.accent,
-    },
+    infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    infoLabel: { fontSize: 14, color: COLORS.textSecondary },
+    copyBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.surfaceLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm },
+    codeText: { fontSize: 14, fontWeight: FONTS.semiBold as any, color: COLORS.primary, letterSpacing: 1 },
+    infoDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 10 },
+    statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(50, 215, 75, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+    statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.success },
+    statusText: { fontSize: 12, color: COLORS.success, fontWeight: FONTS.medium as any },
+    streakContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: SPACING.lg },
+    streakText: { fontSize: 16, fontWeight: FONTS.semiBold as any, color: COLORS.primary },
+    circleContainer: { alignItems: 'center', justifyContent: 'center', marginVertical: SPACING.xl },
+    circleCenter: { position: 'absolute', alignItems: 'center' },
+    circleNumber: { fontSize: 56, fontWeight: FONTS.bold as any, color: COLORS.textPrimary },
+    circleLabel: { fontSize: 14, color: COLORS.textSecondary, marginTop: -4 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING.md },
+    sectionTitle: { fontSize: 18, fontWeight: FONTS.semiBold as any, color: COLORS.textPrimary },
+    participantsList: { gap: 12 },
+    participantRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, padding: SPACING.sm, borderRadius: BORDER_RADIUS.md },
+    avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surfaceLight, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { fontSize: 16, fontWeight: FONTS.bold as any, color: COLORS.primary },
+    participantMeta: { flex: 1, marginLeft: 12 },
+    participantName: { fontSize: 15, fontWeight: FONTS.medium as any, color: COLORS.textPrimary },
+    participantProgressContainer: { marginTop: 4, height: 4, width: '80%' },
+    pProgressBar: { height: 4, backgroundColor: COLORS.surfaceLight, borderRadius: 2, overflow: 'hidden' },
+    pProgressFill: { height: '100%', backgroundColor: COLORS.primary },
+    participantMinutes: { fontSize: 14, fontWeight: FONTS.semiBold as any, color: COLORS.textSecondary },
+    appsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    appCard: { width: '30.5%', backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: BORDER_RADIUS.lg, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: COLORS.border },
+    appCardActive: { borderColor: COLORS.primary, backgroundColor: 'rgba(205, 255, 0, 0.05)' },
+    appIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    appName: { fontSize: 12, color: COLORS.textSecondary, fontWeight: FONTS.medium as any },
+    loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 15, 18, 0.8)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
 });

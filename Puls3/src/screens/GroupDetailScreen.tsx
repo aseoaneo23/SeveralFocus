@@ -127,12 +127,40 @@ export default function GroupDetailScreen({ navigation }: Props) {
 
                 if (error) throw error;
 
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const { data: sessionsData, error: sessionsError } = await supabase
+                    .from('sessions')
+                    .select('user_id, minutes_used, started_at, ended_at')
+                    .eq('group_id', groupId)
+                    .gte('started_at', today.toISOString());
+
+                if (sessionsError) throw sessionsError;
+
                 if (membershipsData) {
-                    const formattedUsers = membershipsData.map((m: any) => ({
-                        id: m.users.id,
-                        username: m.users.username,
-                        minutes_used: m.users.minutes_used
-                    }));
+                    const now = new Date();
+                    const formattedUsers = membershipsData.map((m: any) => {
+                        const userSessions = sessionsData?.filter((s: any) => s.user_id === m.user_id) || [];
+                        
+                        const totalMinutesToday = userSessions.reduce((sum: number, s: any) => {
+                            if (s.minutes_used !== null) {
+                                return sum + s.minutes_used;
+                            } else if (s.started_at && !s.ended_at) {
+                                // Sesión activa: calcular minutos transcurridos hasta ahora
+                                const start = new Date(s.started_at);
+                                const elapsedMs = now.getTime() - start.getTime();
+                                return sum + Math.max(0, elapsedMs / (1000 * 60));
+                            }
+                            return sum;
+                        }, 0);
+                        
+                        return {
+                            id: m.users.id,
+                            username: m.users.username,
+                            minutes_used: Math.floor(totalMinutesToday)
+                        };
+                    });
                     setParticipants(formattedUsers);
                 }
             } catch (error) {
@@ -147,7 +175,7 @@ export default function GroupDetailScreen({ navigation }: Props) {
         if (!groupId) return;
 
         const channel = supabase
-            .channel(`memberships-${groupId}`)
+            .channel(`group-details-${groupId}`)
             .on(
                 'postgres_changes',
                 {
@@ -159,6 +187,19 @@ export default function GroupDetailScreen({ navigation }: Props) {
                 (payload) => {
                     console.log('Cambio detectado en membresías:', payload);
                     fetchUsersFromGroup(); // Recarga la lista inmediatamente
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Escuchar INSERT, UPDATE
+                    schema: 'public',
+                    table: 'sessions',
+                    filter: `group_id=eq.${groupId}`,
+                },
+                (payload) => {
+                    console.log('Cambio detectado en sesiones:', payload);
+                    fetchUsersFromGroup(); // Actualiza los minutos cuando se cierra una sesión
                 }
             )
             .subscribe();

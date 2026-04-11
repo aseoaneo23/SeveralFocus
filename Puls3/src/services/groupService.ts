@@ -67,6 +67,8 @@ export const joinGroup = async (inviteCode: string, userId: string) => {
     .insert({ user_id: userId, group_id: group.id });
 
   if (joinError) throw joinError;
+
+  return group;
 };
 export const leaveGroup = async (userId: string, groupId: string) => {
   const { error } = await supabase

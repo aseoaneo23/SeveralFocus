@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle } from 'react-native-svg';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../navigation/AppNavigator';
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
     background: '#1a1d24',
@@ -56,6 +57,7 @@ export default function GroupDetailScreen() {
     const [inviteCode, setInviteCode] = useState<string>('------');
     const [bannedApps, setBannedApps] = useState<string[]>([]);
     const [participants, setParticipants] = useState<any[]>([]);
+    const [isScrolling, setIsScrolling] = useState(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -160,6 +162,24 @@ export default function GroupDetailScreen() {
 
     // 3. Le pasamos el groupId al hook
     const { group, loading, activeSession, startSession, endSession } = useTimeService(groupId);
+
+    const handleScrollingFoo = async (app: string) => {
+        if (!isScrolling) {
+            setIsScrolling(true);
+            Alert.alert(
+                '⏱ Simulando uso',
+                `Estás usando ${app}... El tiempo del grupo corre.`
+            );
+            await startSession(app);
+        } else {
+            setIsScrolling(false);
+            Alert.alert(
+                '⏹️ Simulacro detenido',
+                `Has dejado de usar la app.`
+            );
+            await endSession();
+        }
+    };
 
     // 4. Usamos los datos (Fallback a MOCK_GROUP si no han cargado)
     const total_minutes = group?.totalMinutes ?? MOCK_GROUP.total_minutes;
@@ -276,24 +296,7 @@ export default function GroupDetailScreen() {
                                     activeSession?.appName === app && { borderWidth: 2, borderColor: COLORS.progress }
                                 ]}
                                 activeOpacity={0.7}
-                                onPress={async () => {
-                                    if (activeSession?.appName === app) {
-                                        // Cierra la sesión si tocamos la app que ya está activa
-                                        await endSession();
-                                    } else if (!activeSession) {
-                                        // Inicia la sesión si no hay ninguna
-                                        await startSession(app);
-                                        Alert.alert(
-                                            '⏱ Simulando uso',
-                                            `Ahora estás "usando" ${app}. El tiempo está corriendo, vuelve a tocar para cerrar la sesión.`
-                                        );
-                                    } else {
-                                        Alert.alert(
-                                            '⚠️ Sesión activa',
-                                            `Ya estás usando ${activeSession.appName}. Ciérrala primero tocándola.`
-                                        );
-                                    }
-                                }}
+                                onPress={() => handleScrollingFoo(app)}
                             >
                                 <Text style={styles.appCircleText}>
                                     {app.charAt(0).toUpperCase()}

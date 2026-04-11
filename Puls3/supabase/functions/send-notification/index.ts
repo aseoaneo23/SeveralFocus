@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
     try {
         const supabaseUrl = Deno.env.get("EXPO_PUBLIC_SUPABASE_URL")
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+        const supabaseServiceKey = Deno.env.get("EXSUPABASE_SERVICE_ROLE_KEY")
         const onesignalAppId = Deno.env.get("ONESIGNAL_APP_ID")
         const onesignalApiKey = Deno.env.get("ONESIGNAL_API_KEY")
 

@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 import { createGroup } from '../services/groupService';
 import { supabase } from '../lib/supabase';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../navigation/AppNavigator';
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'CreateGroup'>;
 };
@@ -54,7 +55,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
                 .map(app => app.trim())
                 .filter(app => app.length > 0);
 
-            await createGroup({
+            const group = await createGroup({
                 name: groupName,
                 bannedApps: bannedAppsArray,
                 timePerPerson: 60, // Valor por defecto en minutos
@@ -63,8 +64,9 @@ export default function CreateGroupScreen({ navigation }: Props) {
                 createdBy: user.id,
             });
 
-            Alert.alert("¡Éxito!", "Grupo creado correctamente");
-            navigation.navigate('GroupDetail');
+            // Persistir grupo e ir a detalles sin historial
+            await AsyncStorage.setItem(STORAGE_KEYS.GROUP_ID, group.id);
+            navigation.replace('GroupDetail');
         } catch (error: any) {
             Alert.alert("Error", error.message || "Ocurrió un error al crear el grupo");
         } finally {

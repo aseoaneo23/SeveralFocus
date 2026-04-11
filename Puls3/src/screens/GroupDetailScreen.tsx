@@ -15,6 +15,12 @@ import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../navigation/storage';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
+
+type Props = {
+    navigation: NativeStackNavigationProp<RootStackParamList, 'GroupDetail'>;
+};
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
     background: '#1a1d24',
@@ -51,7 +57,7 @@ const STROKE_WIDTH = 14;
 const RADIUS = (CIRCLE_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export default function GroupDetailScreen() {
+export default function GroupDetailScreen({ navigation }: Props) {
     const [showCode, setShowCode] = useState(false);
     const [groupId, setGroupId] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | undefined>(undefined);
@@ -123,9 +129,9 @@ export default function GroupDetailScreen() {
 
                 if (membershipsData) {
                     const formattedUsers = membershipsData.map((m: any) => ({
-                        id: m.users?.id || m.user_id,
-                        username: m.users?.username || 'Anónimo',
-                        minutes_used: 0
+                        id: m.users.id,
+                        username: m.users.username,
+                        minutes_used: m.users.minutes_used
                     }));
                     setParticipants(formattedUsers);
                 }
@@ -196,6 +202,27 @@ export default function GroupDetailScreen() {
     // ── Porcentaje para la barra lineal ──
     const barPercent = (used_minutes / total_minutes) * 100;
 
+    const handleLeaveGroup = async () => {
+        Alert.alert(
+            'Salir del grupo',
+            '¿Estás seguro de que quieres salir a la pantalla principal?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Salir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await AsyncStorage.removeItem(STORAGE_KEYS.GROUP_ID);
+                        navigation.reset({
+                            index: 0,
+                            routes: [{ name: 'Home' }],
+                        });
+                    },
+                },
+            ]
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar style="light" />
@@ -205,13 +232,22 @@ export default function GroupDetailScreen() {
             >
                 {/* ── Cabecera ── */}
                 <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.titleRow}
-                        activeOpacity={0.7}
-                        onPress={() => setShowCode(!showCode)}
-                    >
-                        <Text style={styles.groupName}>{name}</Text>
-                    </TouchableOpacity>
+                    <View style={styles.headerTopRow}>
+                        <TouchableOpacity
+                            style={styles.titleRow}
+                            activeOpacity={0.7}
+                            onPress={() => setShowCode(!showCode)}
+                        >
+                            <Text style={styles.groupName}>{name}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.exitButton}
+                            onPress={handleLeaveGroup}
+                        >
+                            <Text style={styles.exitButtonText}>Salir</Text>
+                        </TouchableOpacity>
+                    </View>
 
                     {showCode && (
                         <View style={styles.codeBadge}>
@@ -329,7 +365,26 @@ const styles = StyleSheet.create({
     header: {
         marginBottom: 32,
     },
+    headerTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    exitButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 69, 58, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 69, 58, 0.3)',
+    },
+    exitButtonText: {
+        color: '#ff453a',
+        fontWeight: '600',
+        fontSize: 14,
+    },
     titleRow: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         flexWrap: 'wrap',

@@ -10,11 +10,11 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/AppNavigator';
+import type { RootStackParamList } from '../navigation/types';
 import { supabase } from '../lib/supabase';
 import { OneSignal } from 'react-native-onesignal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS } from '../navigation/AppNavigator';
+import { STORAGE_KEYS } from '../navigation/storage';
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {

@@ -12,11 +12,11 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/AppNavigator';
+import type { RootStackParamList } from '../navigation/types';
 import { createGroup } from '../services/groupService';
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS } from '../navigation/AppNavigator';
+import { STORAGE_KEYS } from '../navigation/storage';
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'CreateGroup'>;
 };

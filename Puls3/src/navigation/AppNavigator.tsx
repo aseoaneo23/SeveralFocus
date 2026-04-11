@@ -5,25 +5,14 @@ import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import CreateUserScreen  from '../screens/CreateUserScreen'
-import HomeScreen        from '../screens/HomeScreen'
+
+import { STORAGE_KEYS } from './storage'
+import { RootStackParamList } from './types'
+import CreateUserScreen from '../screens/CreateUserScreen'
+import HomeScreen from '../screens/HomeScreen'
 import CreateGroupScreen from '../screens/CreateGroupScreen'
-import JoinGroupsScreen  from '../screens/JoinGroupsScreen'
+import JoinGroupsScreen from '../screens/JoinGroupsScreen'
 import GroupDetailScreen from '../screens/GroupDetailScreen'
-
-export type RootStackParamList = {
-  CreateUser:  undefined
-  Home:        undefined
-  CreateGroup: undefined
-  JoinGroup:   undefined
-  GroupDetail: undefined
-}
-
-// ── Claves centralizadas — importar desde aquí en todas las pantallas ──
-export const STORAGE_KEYS = {
-  USER_ID:  'userId',   // UUID de Supabase Auth
-  GROUP_ID: 'groupId',  // UUID del grupo activo
-} as const
 
 const COLORS = { background: '#1a1d24', detail: '#8e9aaf' }
 
@@ -50,9 +39,9 @@ export default function AppNavigator() {
           STORAGE_KEYS.GROUP_ID,
         ])
 
-        if (!userId)       setInitialRoute('CreateUser')
+        if (!userId) setInitialRoute('CreateUser')
         else if (!groupId) setInitialRoute('Home')
-        else               setInitialRoute('GroupDetail')
+        else setInitialRoute('GroupDetail')
       } catch {
         setInitialRoute('CreateUser')
       }
@@ -72,11 +61,11 @@ export default function AppNavigator() {
           contentStyle: { backgroundColor: COLORS.background },
         }}
       >
-        <Stack.Screen name="CreateUser"  component={CreateUserScreen}  />
-        <Stack.Screen name="Home"        component={HomeScreen}         />
-        <Stack.Screen name="CreateGroup" component={CreateGroupScreen}  />
-        <Stack.Screen name="JoinGroup"   component={JoinGroupsScreen}   />
-        <Stack.Screen name="GroupDetail" component={GroupDetailScreen}  />
+        <Stack.Screen name="CreateUser" component={CreateUserScreen} />
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
+        <Stack.Screen name="JoinGroup" component={JoinGroupsScreen} />
+        <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   )

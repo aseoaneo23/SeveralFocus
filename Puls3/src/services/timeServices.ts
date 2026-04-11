@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Alert, AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib/supabase';
 // import { useAuth } from './useAuth'; // Comentado temporalmente porque aún no tienes creado este hook
@@ -22,10 +22,8 @@ interface ActiveSession {
 }
 
 export const useTimeService = (groupId: string | null, userId?: string) => {
-  // const { session } = useAuth(); // Depende de useAuth
-  // Mock de la sesión temporal usando el parámetro o un string vacío
-  Alert.alert('El user id en useTimeService es userId', userId);
-  const session = { user: { id: userId || 'ID_DE_USUARIO_AQUI' } };
+  // Memoizamos el objeto de sesión para que no cambie su referencia en cada render y cause un bucle infinito
+  const session = useMemo(() => ({ user: { id: userId || 'ID_DE_USUARIO_AQUI' } }), [userId]);
   const [group, setGroup] = useState<GroupState | null>(null);
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,7 +43,6 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
       console.error('Error loading group:', error);
       return;
     }
-
     setGroup({
       id: data.id,
       name: data.name,
@@ -56,6 +53,7 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
       killedBy: data.killed_by,
       streakDays: data.streak_days,
     });
+
   }, [groupId, session]);
 
   // Suscripción en tiempo real a cambios en el grupo (para actualizar used_minutes)

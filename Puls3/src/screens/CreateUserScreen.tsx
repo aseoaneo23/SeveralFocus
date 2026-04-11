@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 import { supabase } from '../lib/supabase';
 import { OneSignal } from 'react-native-onesignal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../navigation/AppNavigator';
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
@@ -48,10 +50,13 @@ export default function CreateUserScreen({ navigation }: Props) {
                 // 2. Insertar el usuario en tu tabla pública "users"
                 await supabase.from('users').upsert({ id: userId, username: userName });
 
-                // 3. Registrar este dispositivo en OneSignal con el UUID real
+                // 3. Guardar persistencia de sesión en AsyncStorage
+                await AsyncStorage.setItem(STORAGE_KEYS.USER_ID, userId);
+
+                // 4. Registrar este dispositivo en OneSignal con el UUID real
                 OneSignal.login(userId);
 
-                // 4. Navegar al Home
+                // 5. Navegar al Home
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'Home' }],

@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
     TouchableOpacity,
     StyleSheet,
     SafeAreaView,
+    ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { supabase } from '../lib/supabase';
 
 type HomeScreenProps = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -20,20 +22,62 @@ const COLORS = {
     surface: '#2c323d',
     textPrimary: '#e0e1dd',
     textSecondary: '#8e9aaf',
+    accent: '#6c63ff',
 };
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
-    // Espacio para integración con el Backend
+    const [userGroupId, setUserGroupId] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const checkMembership = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const { data: membership, error } = await supabase
+                    .from('memberships')
+                    .select('group_id')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (membership) {
+                    setUserGroupId(membership.group_id);
+                }
+            } catch (error) {
+                console.log('Error checking membership:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        checkMembership();
+    }, []);
+
     const handleCreateGroup = () => {
-        console.log('Navegando a Crear Grupo...');
-        navigation.navigate('CreateGroup');
+        if (!userGroupId) {
+            navigation.navigate('CreateGroup');
+        }
     };
 
-    // Espacio para integración con el Backend
-    const handleJoinGroup = () => {
-        console.log('Navegando a Unirse a Grupo...');
-        navigation.navigate('JoinGroup');
+    const handleActionGroup = () => {
+        if (userGroupId) {
+            navigation.navigate('GroupDetail');
+        } else {
+            navigation.navigate('JoinGroup');
+        }
     };
+
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <StatusBar style="light" />
+                <View style={[styles.content, { justifyContent: 'center' }]}>
+                    <ActivityIndicator size="large" color={COLORS.accent} />
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -45,25 +89,38 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
                 {/* ── Subtítulo ── */}
                 <Text style={styles.subtitle}>
-                    Selecciona una opción para comenzar
+                    {userGroupId 
+                        ? 'Gestiona tu participación en el grupo' 
+                        : 'Selecciona una opción para comenzar'}
                 </Text>
 
                 {/* ── Botón Crear Grupo ── */}
-                <TouchableOpacity
-                    style={styles.button}
-                    activeOpacity={0.7}
-                    onPress={handleCreateGroup}
-                >
-                    <Text style={styles.buttonText}>Crear Grupo</Text>
-                </TouchableOpacity>
+                <View style={{ width: '100%' }}>
+                    <TouchableOpacity
+                        style={[styles.button, userGroupId && styles.buttonDisabled]}
+                        activeOpacity={0.7}
+                        onPress={handleCreateGroup}
+                        disabled={!!userGroupId}
+                    >
+                        <Text style={styles.buttonText}>Crear Grupo</Text>
+                    </TouchableOpacity>
+                    
+                    {userGroupId && (
+                        <Text style={styles.infoText}>
+                            Ya perteneces a un grupo. Debes salir de este para crear uno nuevo.
+                        </Text>
+                    )}
+                </View>
 
-                {/* ── Botón Unirse a un Grupo ── */}
+                {/* ── Botón Dinámico (Unirme / Ver Grupo) ── */}
                 <TouchableOpacity
-                    style={styles.button}
+                    style={[styles.button, { marginTop: 8 }]}
                     activeOpacity={0.7}
-                    onPress={handleJoinGroup}
+                    onPress={handleActionGroup}
                 >
-                    <Text style={styles.buttonText}>Unirse a un Grupo</Text>
+                    <Text style={styles.buttonText}>
+                        {userGroupId ? 'Ver mi grupo' : 'Unirse a un Grupo'}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -102,9 +159,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
     },
+    buttonDisabled: {
+        opacity: 0.5,
+    },
     buttonText: {
         color: COLORS.textPrimary,
         fontSize: 16,
         fontWeight: '600',
+    },
+    infoText: {
+        fontSize: 12,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        marginBottom: 20,
+        paddingHorizontal: 10,
     },
 });

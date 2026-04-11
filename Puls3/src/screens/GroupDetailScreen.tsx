@@ -160,8 +160,8 @@ export default function GroupDetailScreen() {
         };
     }, [groupId]);
 
-    // 3. Extraemos startSession y endSession del hook a nivel raíz (¡super importante!)
-    const { group, loading, startSession, endSession } = useTimeService(groupId);
+    // 3. Le pasamos el groupId al hook
+    const { group, loading, activeSession, startSession, endSession } = useTimeService(groupId);
 
     const handleScrollingFoo = async (app: string) => {
         if (!isScrolling) {
@@ -291,7 +291,10 @@ export default function GroupDetailScreen() {
                         {(bannedApps.length > 0 ? bannedApps : MOCK_GROUP.banned_apps).map((app) => (
                             <TouchableOpacity
                                 key={app}
-                                style={styles.appCircle}
+                                style={[
+                                    styles.appCircle,
+                                    activeSession?.appName === app && { borderWidth: 2, borderColor: COLORS.progress }
+                                ]}
                                 activeOpacity={0.7}
                                 onPress={() => handleScrollingFoo(app)}
                             >

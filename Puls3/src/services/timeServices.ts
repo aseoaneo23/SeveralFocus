@@ -12,6 +12,7 @@ interface GroupState {
   isAlive: boolean;
   killedBy?: string;
   streakDays: number;
+  createdBy: string;
 }
 
 interface ActiveSession {
@@ -35,7 +36,7 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
 
     const { data, error } = await supabase
       .from('groups')
-      .select('id, name, total_minutes, used_minutes, is_alive, killed_by, streak_days')
+      .select('id, name, total_minutes, used_minutes, is_alive, killed_by, streak_days, created_by')
       .eq('id', groupId)
       .single();
 
@@ -52,6 +53,7 @@ export const useTimeService = (groupId: string | null, userId?: string) => {
       isAlive: data.is_alive,
       killedBy: data.killed_by,
       streakDays: data.streak_days,
+      createdBy: data.created_by,
     });
 
   }, [groupId, session]);

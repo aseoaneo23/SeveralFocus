@@ -79,6 +79,24 @@ export const leaveGroup = async (userId: string, groupId: string) => {
 
   if (error) throw error;
 };
+
+export const deleteGroup = async (groupId: string) => {
+  // 1. Eliminar membresías primero para evitar errores de integridad
+  const { error: membersError } = await supabase
+    .from('memberships')
+    .delete()
+    .eq('group_id', groupId);
+
+  if (membersError) throw membersError;
+
+  // 2. Eliminar el grupo
+  const { error: groupError } = await supabase
+    .from('groups')
+    .delete()
+    .eq('id', groupId);
+
+  if (groupError) throw groupError;
+};
 /*import { joinGroup } from '../services/groupService';
 
 // ... dentro de tu componente

@@ -15,7 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../navigation/storage';
-import { leaveGroup } from '../services/groupService';
+import { leaveGroup, deleteGroup } from '../services/groupService';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -276,6 +276,36 @@ export default function GroupDetailScreen({ navigation }: Props) {
         );
     };
 
+    const handleDeleteGroup = async () => {
+        if (!groupId) return;
+
+        Alert.alert(
+            'Borrar grupo',
+            'Se eliminará el grupo y a todos sus participantes definitivamente. ¿Estás seguro?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteGroup(groupId);
+                            await AsyncStorage.removeItem(STORAGE_KEYS.GROUP_ID);
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Home' }],
+                            });
+                        } catch (error: any) {
+                            Alert.alert('Error', 'No se pudo eliminar el grupo: ' + error.message);
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const isOwner = group?.createdBy === userId;
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar style="light" />
@@ -295,12 +325,25 @@ export default function GroupDetailScreen({ navigation }: Props) {
                         </TouchableOpacity>
 
                         <View style={styles.headerButtons}>
-                            <TouchableOpacity
-                                style={styles.abandonButton}
-                                onPress={handleAbandonGroup}
-                            >
-                                <Text style={styles.abandonButtonText}>Abandonar</Text>
-                            </TouchableOpacity>
+                            {isOwner && (
+                                <TouchableOpacity
+                                    style={styles.deleteButton}
+                                    onPress={handleDeleteGroup}
+                                >
+                                    <View style={styles.trashCircle}>
+                                        <Text style={{ fontSize: 10 }}>🗑️</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+
+                            {!isOwner && (
+                                <TouchableOpacity
+                                    style={styles.abandonButton}
+                                    onPress={handleAbandonGroup}
+                                >
+                                    <Text style={styles.abandonButtonText}>Abandonar</Text>
+                                </TouchableOpacity>
+                            )}
 
                             <TouchableOpacity
                                 style={styles.exitButton}
@@ -449,6 +492,19 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontWeight: '600',
         fontSize: 12,
+    },
+    deleteButton: {
+        padding: 8,
+    },
+    trashCircle: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255, 69, 58, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 69, 58, 0.3)',
     },
     exitButton: {
         paddingHorizontal: 16,

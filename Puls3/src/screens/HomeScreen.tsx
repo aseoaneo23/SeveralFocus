@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     View,
     Text,
-    TextInput,
     TouchableOpacity,
     StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
+    SafeAreaView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
+
+type HomeScreenProps = {
+    navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
+};
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
@@ -18,35 +22,33 @@ const COLORS = {
     textSecondary: '#8e9aaf',
 };
 
-export default function CreateGroupScreen() {
-    const [groupName, setGroupName] = useState('');
-
+export default function HomeScreen({ navigation }: HomeScreenProps) {
     // Espacio para integración con el Backend
     const handleCreateGroup = () => {
-        console.log('Nombre del grupo:', groupName);
+        console.log('Navegando a Crear Grupo...');
+        navigation.navigate('CreateGroup');
+    };
+
+    // Espacio para integración con el Backend
+    const handleJoinGroup = () => {
+        console.log('Navegando a Unirse a Grupo...');
+        navigation.navigate('JoinGroup');
     };
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        <SafeAreaView style={styles.container}>
             <StatusBar style="light" />
 
             <View style={styles.content}>
                 {/* ── Título ── */}
-                <Text style={styles.title}>Nombre de Grupo</Text>
+                <Text style={styles.title}>Grupo</Text>
 
-                {/* ── Input ── */}
-                <TextInput
-                    style={styles.input}
-                    placeholder="Escribe el nombre del grupo..."
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={groupName}
-                    onChangeText={setGroupName}
-                />
+                {/* ── Subtítulo ── */}
+                <Text style={styles.subtitle}>
+                    Selecciona una opción para comenzar
+                </Text>
 
-                {/* ── Botón ── */}
+                {/* ── Botón Crear Grupo ── */}
                 <TouchableOpacity
                     style={styles.button}
                     activeOpacity={0.7}
@@ -54,8 +56,17 @@ export default function CreateGroupScreen() {
                 >
                     <Text style={styles.buttonText}>Crear Grupo</Text>
                 </TouchableOpacity>
+
+                {/* ── Botón Unirse a un Grupo ── */}
+                <TouchableOpacity
+                    style={styles.button}
+                    activeOpacity={0.7}
+                    onPress={handleJoinGroup}
+                >
+                    <Text style={styles.buttonText}>Unirse a un Grupo</Text>
+                </TouchableOpacity>
             </View>
-        </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
@@ -72,28 +83,24 @@ const styles = StyleSheet.create({
         paddingHorizontal: 32,
     },
     title: {
-        fontSize: 28,
+        fontSize: 32,
         fontWeight: '700',
         color: COLORS.textPrimary,
-        marginBottom: 32,
+        marginBottom: 8,
         letterSpacing: 0.5,
     },
-    input: {
-        width: '100%',
-        backgroundColor: COLORS.surface,
-        color: COLORS.textPrimary,
-        fontSize: 16,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        marginBottom: 20,
+    subtitle: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        marginBottom: 40,
     },
     button: {
         width: '100%',
         backgroundColor: COLORS.surface,
-        paddingVertical: 16,
+        paddingVertical: 18,
         borderRadius: 12,
         alignItems: 'center',
+        marginBottom: 16,
     },
     buttonText: {
         color: COLORS.textPrimary,

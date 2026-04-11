@@ -18,7 +18,7 @@ const COLORS = {
     textSecondary: '#8e9aaf',
 };
 
-export default function HomeScreen() {
+export default function JoinGroupsScreen() {
     const [groupName, setGroupName] = useState('');
 
     // Espacio para integración con el Backend (GroupCode)

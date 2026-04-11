@@ -1,5 +1,5 @@
-import HomeScreen from './src/screens/HomeScreen';
+import CreateGroupScreen from './src/screens/CreateGroupScreen';
 
 export default function App() {
-  return <HomeScreen />;
+  return <CreateGroupScreen />;
 }

@@ -21,9 +21,9 @@ const COLORS = {
 export default function HomeScreen() {
     const [groupName, setGroupName] = useState('');
 
-    // Espacio para integración con el Backend
+    // Espacio para integración con el Backend (GroupCode)
     const handleCreateGroup = () => {
-        console.log('Nombre del grupo:', groupName);
+        console.log('Codigo del grupo:', groupName);
     };
 
     return (
@@ -40,7 +40,7 @@ export default function HomeScreen() {
                 {/* ── Input ── */}
                 <TextInput
                     style={styles.input}
-                    placeholder="Escribe el nombre..."
+                    placeholder="Escribe el codigo de tu grupo..."
                     placeholderTextColor={COLORS.textSecondary}
                     value={groupName}
                     onChangeText={setGroupName}
@@ -52,7 +52,7 @@ export default function HomeScreen() {
                     activeOpacity={0.7}
                     onPress={handleCreateGroup}
                 >
-                    <Text style={styles.buttonText}>Crear Grupo</Text>
+                    <Text style={styles.buttonText}>Unirse al Grupo</Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>

@@ -141,27 +141,29 @@ export default function GroupDetailScreen({ navigation }: Props) {
 
                 if (membershipsData) {
                     const now = new Date();
-                    const formattedUsers = membershipsData.map((m: any) => {
-                        const userSessions = sessionsData?.filter((s: any) => s.user_id === m.user_id) || [];
-                        
-                        const totalMinutesToday = userSessions.reduce((sum: number, s: any) => {
-                            if (s.minutes_used !== null) {
-                                return sum + s.minutes_used;
-                            } else if (s.started_at && !s.ended_at) {
-                                // Sesión activa: calcular minutos transcurridos hasta ahora
-                                const start = new Date(s.started_at);
-                                const elapsedMs = now.getTime() - start.getTime();
-                                return sum + Math.max(0, elapsedMs / (1000 * 60));
-                            }
-                            return sum;
-                        }, 0);
-                        
-                        return {
-                            id: m.users.id,
-                            username: m.users.username,
-                            minutes_used: Math.floor(totalMinutesToday)
-                        };
-                    });
+                    const formattedUsers = membershipsData
+                        .filter((m: any) => m.users) // Nos aseguramos de que el usuario exista
+                        .map((m: any) => {
+                            const userSessions = sessionsData?.filter((s: any) => s.user_id === m.user_id) || [];
+                            
+                            const totalMinutesToday = userSessions.reduce((sum: number, s: any) => {
+                                if (s.minutes_used !== null) {
+                                    return sum + s.minutes_used;
+                                } else if (s.started_at && !s.ended_at) {
+                                    // Sesión activa: calcular minutos transcurridos hasta ahora
+                                    const start = new Date(s.started_at);
+                                    const elapsedMs = now.getTime() - start.getTime();
+                                    return sum + Math.max(0, elapsedMs / (1000 * 60));
+                                }
+                                return sum;
+                            }, 0);
+                            
+                            return {
+                                id: m.users?.id || m.user_id,
+                                username: m.users?.username || 'Usuario',
+                                minutes_used: Math.floor(totalMinutesToday)
+                            };
+                        });
                     setParticipants(formattedUsers);
                 }
             } catch (error) {

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
+import { supabase } from '../lib/supabase';
+import { useTimeService } from '../services/timeServices';
 import {
     View,
     Text,
@@ -50,8 +52,74 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function GroupDetailScreen() {
     const [showCode, setShowCode] = useState(false);
+    const [groupId, setGroupId] = useState<string | null>(null);
+    const [participants, setParticipants] = useState<any[]>([]);
 
-    const { total_minutes, used_minutes, streak_days, name, invite_code } = MOCK_GROUP;
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                // 1. Le preguntas a Supabase quién es el usuario que está usando la app
+                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                if (authError || !user) throw new Error("No hay un usuario autenticado");
+
+                // 2. Buscamos el grupo al que pertenece el usuario
+                const { data: membership } = await supabase
+                    .from('memberships')
+                    .select('group_id')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (membership?.group_id) {
+                    setGroupId(membership.group_id);
+                }
+            } catch (error) {
+                console.log(error);
+            }
+        };
+
+        fetchUser();
+    }, []);
+
+    useEffect(() => {
+        const fetchUsersFromGroup = async () => {
+            if (!groupId) return;
+            try {
+                // Obtenemos los miembros uniéndolo con la tabla 'users' para obtener el username
+                const { data: membershipsData, error } = await supabase
+                    .from('memberships')
+                    .select(`
+                        user_id,
+                        users (id, username)
+                    `)
+                    .eq('group_id', groupId);
+
+                if (error) throw error;
+
+                if (membershipsData) {
+                    const formattedUsers = membershipsData.map((m: any) => ({
+                        id: m.users?.id || m.user_id,
+                        username: m.users?.username || 'Anónimo',
+                        minutes_used: 0 // Aquí podrías cruzarlo con la tabla sessions en el futuro
+                    }));
+                    setParticipants(formattedUsers);
+                }
+            } catch (error) {
+                console.log("Error al traer participantes:", error);
+            }
+        };
+
+        fetchUsersFromGroup();
+    }, [groupId]);
+
+    // 3. Le pasamos el groupId al hook (debe destruturarse como objeto, no array)
+    const { group, loading } = useTimeService(groupId);
+
+    // 4. Usamos los datos (Fallback a MOCK_GROUP si no han cargado)
+    const total_minutes = group?.totalMinutes ?? MOCK_GROUP.total_minutes;
+    const used_minutes = group?.usedMinutes ?? MOCK_GROUP.used_minutes;
+    const streak_days = group?.streakDays ?? MOCK_GROUP.streak_days;
+    const name = group?.name ?? MOCK_GROUP.name;
+    const invite_code = MOCK_GROUP.invite_code;
     const remaining = total_minutes - used_minutes;
     const usedRatio = used_minutes / total_minutes;
     const progressOffset = CIRCUMFERENCE * (1 - usedRatio);
@@ -133,7 +201,7 @@ export default function GroupDetailScreen() {
                 {/* ── Lista de Participantes ── */}
                 <View style={styles.participantsSection}>
                     <Text style={styles.sectionTitle}>Participantes</Text>
-                    {MOCK_PARTICIPANTS.map((p) => (
+                    {(participants.length > 0 ? participants : MOCK_PARTICIPANTS).map((p) => (
                         <View key={p.id} style={styles.participantRow}>
                             {/* Avatar — inicial */}
                             <View style={styles.avatar}>

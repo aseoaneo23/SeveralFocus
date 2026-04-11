@@ -22,8 +22,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function App() {
   useEffect(() => {
     OneSignal.Debug.setLogLevel(LogLevel.Verbose);
+    console.log("ONESIGNAL_APP_ID", process.env.ONESIGNAL_APP_ID);
 
-    OneSignal.initialize(process.env.ONESIGNAL_APP_ID!);
+    OneSignal.initialize("2426485f-1cb8-4ac9-a326-7df332e72244");
     OneSignal.Notifications.requestPermission(false);
 
   }, []);

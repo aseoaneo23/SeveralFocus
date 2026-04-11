@@ -30,12 +30,15 @@ export const createGroup = async (params: CreateGroupParams) => {
   if (groupError) throw groupError;
 
   // 2. Añadir creador como miembro
-  const { error: memberError } = await supabase
-    .from('memberships')
-    .insert({ user_id: params.createdBy, group_id: group.id });
+  try {
+    const { error: memberError } = await supabase
+      .from('memberships')
+      .insert({ user_id: params.createdBy, group_id: group.id });
 
-  if (memberError) throw memberError;
-
+    if (memberError) throw memberError;
+  } catch (error) {
+    console.error('Error creando membresía:', error);
+  }
   return group;
 };
 

@@ -38,4 +38,7 @@ yarn-error.*
 
 # generated native folders
 /ios
-/android
+android
+*gradle*
+debug.keystore
+proguard-rules.pro

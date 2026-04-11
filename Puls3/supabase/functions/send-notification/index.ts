@@ -51,29 +51,22 @@ Deno.serve(async (req) => {
         // Initialize Supabase admin client to bypass RLS (we need to fetch all members)
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-        // 1. Get the members of the group with their onesignal_player_ids
-        const { data, error } = await supabase
+        // 1. Get the members of the group
+        const { data: members, error: membersError } = await supabase
             .from('group_members')
-            .select(`
-                user_id,
-                users (
-                    push_token
-                )
-            `)
+            .select('user_id')
             .eq('group_id', event.group_id)
 
-        if (error) {
-            throw new Error(`Failed to fetch group members: ${error.message}`)
+        if (membersError) {
+            throw new Error(`Failed to fetch group members: ${membersError.message}`)
         }
 
-        // Filter out members without a OneSignal player ID
-        const playerIds = members
-            .map((m) => m.onesignal_player_id)
-            .filter((id) => id !== null && id !== "")
+        // We only need the user_ids (which match the OneSignal external_id)
+        const userIds = members.map((m) => m.user_id).filter(Boolean)
 
-        if (playerIds.length === 0) {
+        if (userIds.length === 0) {
             return new Response(
-                JSON.stringify({ message: "No members with valid OneSignal IDs found in this group." }),
+                JSON.stringify({ message: "No members found in this group." }),
                 { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             )
         }
@@ -86,29 +79,32 @@ Deno.serve(async (req) => {
         let content = "A new event occurred in your group."
 
         switch (event.type) {
-            case "session_start":
+            case "app_opened":
                 heading = "🛑 App Opened"
                 content = `🚨 ${username} opened ${event.metadata?.app_name || "a forbidden app"}`
                 break
-            case "time_warning":
+            case "milestone_5":
                 heading = "⚠️ Time Warning"
-                content = `⚠️ ${username} has consumed ${event.metadata?.minutes || 0} minutes`
+                content = `⚠️ ${username} has consumed 5 minutos`
                 break
-            case "critical":
+            case "critical_10":
                 heading = "⛔ Critical Time"
                 content = `⛔ Only ${event.metadata?.remaining_time || 0} minutes left`
                 break
-            case "group_dead":
+            case "group_death":
                 heading = "💀 Group Dead"
                 content = `💀 ${username} destroyed the group`
                 break
         }
 
         // 3. Send to OneSignal
-        // Using include_player_ids array (for direct device targeting)
+        // Usar include_aliases permite a OneSignal mapear los UUIDs de Supabase directamente a los celulares
         const onesignalBody = {
             app_id: onesignalAppId,
-            include_player_ids: playerIds,
+            target_channel: "push",
+            include_aliases: {
+                external_id: userIds
+            },
             headings: { en: heading },
             contents: { en: content },
             data: {
@@ -136,7 +132,7 @@ Deno.serve(async (req) => {
         return new Response(
             JSON.stringify({
                 message: "Push notifications successfully dispatched.",
-                recipients_count: playerIds.length,
+                recipients_count: userIds.length,
                 onesignal_response: onesignalResult,
             }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

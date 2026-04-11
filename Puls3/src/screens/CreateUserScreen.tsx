@@ -9,6 +9,8 @@ import {
     Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
 
 // ─── Paleta de colores ───────────────────────────────────────
 const COLORS = {
@@ -18,12 +20,17 @@ const COLORS = {
     textSecondary: '#8e9aaf',
 };
 
-export default function JoinGroupsScreen() {
-    const [groupName, setGroupName] = useState('');
+type Props = {
+    navigation: NativeStackNavigationProp<RootStackParamList, 'CreateUser'>;
+};
 
-    // Espacio para integración con el Backend (GroupCode)
-    const handleJoinGroup = () => {
-        console.log('Codigo del grupo:', groupName);
+export default function CreateUserScreen({ navigation }: Props) {
+    const [userName, setUserName] = useState('');
+
+    // Espacio para integración con el Backend
+    const handleCreateUser = () => {
+        console.log('Nombre del usuario:', userName);
+        navigation.replace('Home');
     };
 
     return (
@@ -35,24 +42,24 @@ export default function JoinGroupsScreen() {
 
             <View style={styles.content}>
                 {/* ── Título ── */}
-                <Text style={styles.title}>Codigo de Grupo</Text>
+                <Text style={styles.title}>Nombre de Usuario</Text>
 
                 {/* ── Input ── */}
                 <TextInput
                     style={styles.input}
-                    placeholder="Escribe el codigo de tu grupo..."
+                    placeholder="Escribe tu nombre..."
                     placeholderTextColor={COLORS.textSecondary}
-                    value={groupName}
-                    onChangeText={setGroupName}
+                    value={userName}
+                    onChangeText={setUserName}
                 />
 
                 {/* ── Botón ── */}
                 <TouchableOpacity
                     style={styles.button}
                     activeOpacity={0.7}
-                    onPress={handleJoinGroup}
+                    onPress={handleCreateUser}
                 >
-                    <Text style={styles.buttonText}>Unirse al Grupo</Text>
+                    <Text style={styles.buttonText}>Crear Usuario</Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>

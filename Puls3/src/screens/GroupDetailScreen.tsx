@@ -320,7 +320,7 @@ export default function GroupDetailScreen({ navigation }: Props) {
                         />
                     </Svg>
                     <View style={styles.circleCenter}>
-                        <Text style={styles.circleNumber}>{remaining}</Text>
+                        <Text style={styles.circleNumber}>{remaining < 0 ? 0 : remaining}</Text>
                         <Text style={styles.circleLabel}>min restantes</Text>
                     </View>
                 </View>

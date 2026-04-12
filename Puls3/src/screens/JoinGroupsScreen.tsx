@@ -68,7 +68,7 @@ export default function JoinGroupsScreen({ navigation }: Props) {
                     <View style={styles.iconContainer}>
                         <Hash size={48} color={COLORS.primary} />
                     </View>
-                    
+
                     <Text style={styles.title}>Código de Invitación</Text>
                     <Text style={styles.subtitle}>
                         Ingresa el código de 6 dígitos que te proporcionó el creador del grupo.
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
+        paddingVertical: SPACING.xxl,
     },
     backButton: {
         width: 40,

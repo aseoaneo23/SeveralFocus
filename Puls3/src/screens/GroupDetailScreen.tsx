@@ -18,12 +18,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../navigation/storage';
 import { leaveGroup, deleteGroup } from '../services/groupService';
 import { COLORS, SPACING, BORDER_RADIUS, FONTS } from '../theme';
-import { 
-    Flame, 
-    Trash2, 
-    LogOut, 
-    X, 
-    Smartphone, 
+import {
+    Flame,
+    Trash2,
+    LogOut,
+    X,
+    Smartphone,
     Activity,
     Info,
     Copy,
@@ -258,7 +258,7 @@ export default function GroupDetailScreen({ navigation }: Props) {
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar style="light" />
-            
+
             <View style={styles.topHeader}>
                 <TouchableOpacity onPress={handleGoHome} style={styles.backButton}>
                     <X color={COLORS.textPrimary} size={24} />
@@ -311,12 +311,12 @@ export default function GroupDetailScreen({ navigation }: Props) {
 
                 <View style={styles.circleContainer}>
                     <Svg width={CIRCLE_SIZE} height={CIRCLE_SIZE}>
-                        <Circle cx={CIRCLE_SIZE/2} cy={CIRCLE_SIZE/2} r={RADIUS} stroke={COLORS.surfaceLight} strokeWidth={STROKE_WIDTH} fill="none" />
-                        <Circle 
-                            cx={CIRCLE_SIZE/2} cy={CIRCLE_SIZE/2} r={RADIUS} 
+                        <Circle cx={CIRCLE_SIZE / 2} cy={CIRCLE_SIZE / 2} r={RADIUS} stroke={COLORS.surfaceLight} strokeWidth={STROKE_WIDTH} fill="none" />
+                        <Circle
+                            cx={CIRCLE_SIZE / 2} cy={CIRCLE_SIZE / 2} r={RADIUS}
                             stroke={COLORS.primary} strokeWidth={STROKE_WIDTH} fill="none"
                             strokeDasharray={CIRCUMFERENCE} strokeDashoffset={progressOffset}
-                            strokeLinecap="round" rotation="-90" origin={`${CIRCLE_SIZE/2}, ${CIRCLE_SIZE/2}`}
+                            strokeLinecap="round" rotation="-90" origin={`${CIRCLE_SIZE / 2}, ${CIRCLE_SIZE / 2}`}
                         />
                     </Svg>
                     <View style={styles.circleCenter}>
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
+        paddingVertical: SPACING.xxl,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.border,
     },

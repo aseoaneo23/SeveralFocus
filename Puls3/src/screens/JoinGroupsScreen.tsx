@@ -81,12 +81,12 @@ export default function JoinGroupsScreen({ navigation }: Props) {
                         value={groupCode}
                         onChangeText={setGroupCode}
                         autoCapitalize="characters"
-                        maxLength={6}
+                        maxLength={8}
                         editable={!isLoading}
                     />
 
                     {touched && !isValid && (
-                        <Text style={styles.errorText}>Ingresa un código válido de 6 caracteres.</Text>
+                        <Text style={styles.errorText}>Ingresa un código válido de 8 caracteres.</Text>
                     )}
 
                     <TouchableOpacity

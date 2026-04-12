@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📱 SeveralFocus
+# 📱 Puls3
 
 ### App de responsabilidad de tiempo de pantalla
 **Desarrollada para el Impacthon**

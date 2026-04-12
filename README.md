@@ -15,7 +15,7 @@
 
 ## 🧠 Sobre el proyecto
 
-**SeveralFocus** es una aplicación móvil de responsabilidad grupal para el control del tiempo de pantalla. Los usuarios se unen a grupos, establecen límites de uso de apps y se responsabilizan mutuamente: si alguien consume el tiempo del grupo en apps prohibidas, ¡el grupo muere! El objetivo es fomentar hábitos digitales saludables a través de la presión social positiva.
+**Puls3** es una aplicación móvil de responsabilidad grupal para el control del tiempo de pantalla. Los usuarios se unen a grupos, establecen límites de uso de apps y se responsabilizan mutuamente: si alguien consume el tiempo del grupo en apps prohibidas, ¡el grupo muere! El objetivo es fomentar hábitos digitales saludables a través de la presión social positiva.
 
 ---
 
